@@ -1,0 +1,9 @@
+.idea
+class
+target/
+.externalToolBuilders
+.settings
+*.iml
+*.json
+
+.DS_Store
