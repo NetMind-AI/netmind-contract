@@ -122,6 +122,9 @@ contract CommunityFund is ICommunityFund,Ownable{
     event DeleteNodeAddr(address _nodeAddr);
     event Propose(address indexed proposer, uint256 proposalId, address targetAddr, uint256 amount,string content);
     event Vote(address indexed voter, uint256 proposalId);
+    event UpdateLockTime(uint256 _LockTime);
+    event UpdateVotingPeriod(uint256 _votingPeriod);
+
 
     struct ProposalMsg {
         address proposalSponsor;
@@ -168,10 +171,12 @@ contract CommunityFund is ICommunityFund,Ownable{
        
     function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
+        emit UpdateLockTime(_LockTime);
     }
    
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
         votingPeriod = _votingPeriod;
+        emit UpdateVotingPeriod(_votingPeriod);
     }
 
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{

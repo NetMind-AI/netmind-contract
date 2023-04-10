@@ -169,7 +169,7 @@ contract Ledger is Initializable, ILedger{
         }
     }
 
-    function bytes32ToUint(bytes32 b) public pure returns (uint256){
+    function bytes32ToUint(bytes32 b) internal pure returns (uint256){
         uint256 number;
         for(uint i= 0; i<b.length; i++){
             number = number + uint8(b[i])*(2**(8*(b.length-(i+1))));

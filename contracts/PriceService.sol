@@ -136,7 +136,7 @@ contract PriceService is Ownable{
     }
 
     function queryPrice() external view returns (uint256) {
-        return (price);
+        return price;
     }
 }
 
