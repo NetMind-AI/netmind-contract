@@ -214,6 +214,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
 
         withdrawData[addrs[0]][_nonce] =  WithdrawData(addrs[1], uints[0]);
         if(addrs[1] == address(0x0)){
+            require(address(this).balance >= uints[0], "Insufficient contract balance");
             payable(msg.sender).transfer(uints[0]);
         }else{
             IERC20 token = IERC20(addrs[1]);
