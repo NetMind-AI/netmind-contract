@@ -122,6 +122,11 @@ contract Crosschain  is Initializable,Ownable {
     mapping(uint256 => address) public nodeIndexAddr;
     mapping(address => bool) public nodeAddrSta;
     mapping(uint256 => Stake) public stakeMsg;
+    address public exector;
+    uint256 public threshold;
+    mapping(uint256 => uint256) public withdrawLimit;
+    uint256 public signNum;
+    address public caller;
     event UpdatePause(bool sta);
     event WithdrawChargeAmount(address tokenAddr, uint256 amount);
     event AddNodeAddr(address[] nodeAddrs);
@@ -129,7 +134,7 @@ contract Crosschain  is Initializable,Ownable {
     event UpdateChainCharge(string chain, bool sta, address[] tokens, uint256[] fees);
     event TransferToken(address indexed _tokenAddr, address _receiveAddr, uint256 _amount, string chain, string txid);
     event StakeToken(address indexed _tokenAddr, address indexed _userAddr, string receiveAddr, uint256 amount, uint256 fee,string chain);
-   
+    
     struct Data {
         address userAddr;
         address contractAddr;
@@ -190,9 +195,31 @@ contract Crosschain  is Initializable,Ownable {
 
     }
 
+    function updateCaller(address _caller) external onlyOwner{
+        caller = _caller;
+    }
+
+    function updateExector(address _exector) external onlyOwner{
+        exector = _exector;
+    }
+
+    function updateThreshold(uint256 _threshold) external onlyOwner{
+        threshold = _threshold;
+    }
+
+    function updateSignNum(uint256 _signNum) external onlyOwner{
+        require(_signNum > nodeNum/2, " parameter error");
+        signNum = _signNum;
+    }
+
     function updatePause(bool _sta) external onlyOwner{
         pause = _sta;
         emit UpdatePause(_sta);
+    }
+    
+    function close() external{
+        require(exector == msg.sender, "not exector");
+        pause = true;
     }
 
     function updateChainCharge(
@@ -263,7 +290,7 @@ contract Crosschain  is Initializable,Ownable {
         emit DeleteNodeAddr(_nodeAddrs);
     }
 
-    function stakeToken(string memory _chain, string memory receiveAddr, address tokenAddr, uint256 _amount) payable external {
+    function stakeToken(string memory _chain, string memory receiveAddr, address tokenAddr, uint256 _amount) payable external onlyGuard {
         address _sender = msg.sender;
         require( chainSta[_chain], "Crosschain: The chain does not support transfer");
         uint256 _sta = tokenSta[tokenAddr];
@@ -286,14 +313,6 @@ contract Crosschain  is Initializable,Ownable {
         emit StakeToken(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
     }
 
-    /**
-    * @notice A method in which issue transfer tokens to users. 
-    * @param addrs [User address, token contract address]
-    * @param uints [Number of luca fragments (0 for non-luca tokens), number of transfers, expiration time]
-    * @param strs [chain name, transaction id]
-    * @param vs  array of signature data
-    * @param rssMetadata array of signature data
-    */
     function transferToken(
         address[2] calldata addrs,
         uint256[2] calldata uints,
@@ -304,26 +323,32 @@ contract Crosschain  is Initializable,Ownable {
         external
         onlyGuard
     {
+        require( caller == msg.sender, "Crosschain: The caller error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");
         require( !status[strs[0]][strs[1]], "Crosschain: The transaction has been withdrawn");
         status[strs[0]][strs[1]] = true;
         uint256 len = vs.length;
         uint256 counter;
         require(len*2 == rssMetadata.length, "Crosschain: Signature parameter length mismatch");
+        require(verfylimit(uints[0]),"Extraction limit exceeded");
         bytes32 digest = getDigest(Data( addrs[0], addrs[1], uints[0], uints[1], strs[0], strs[1]));
+        address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
-            bool result = verifySign(
+            (bool result, address signAddr) = verifySign(
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
             if (result){
+                signAddrs[i] = signAddr;
                 counter++;
             }
         }
+        uint256 _signNum = (signNum != 0) ? signNum : nodeNum/2;
         require(
-            counter > nodeNum/2,
+            counter >= _signNum,
             "The number of signed accounts did not reach the minimum threshold"
         );
+        require(areElementsUnique(signAddrs), "Signature parameter not unique");
         _transferToken(addrs, uints, strs);
     }
    
@@ -368,14 +393,31 @@ contract Crosschain  is Initializable,Ownable {
         emit TransferToken(addrs[0], addrs[1], uints[0], strs[0], strs[1]);
     }
 
-    function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool)  {
+    function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _nodeAddr = ecrecover(hash, _sig.v, _sig.r, _sig.s);
         require(_nodeAddr !=address(0),"Illegal signature");
-        return nodeAddrSta[_nodeAddr];
+        return (nodeAddrSta[_nodeAddr], _nodeAddr);
     }
     
+    function verfylimit(uint256 amount) internal returns (bool) {
+        uint256 day = block.timestamp/86400;
+        withdrawLimit[day] += amount;
+        return threshold > withdrawLimit[day];
+    }
+
+    function areElementsUnique(address[] memory arr) internal pure returns (bool) {
+        for(uint i = 0; i < arr.length - 1; i++) {
+            for(uint j = i + 1; j < arr.length; j++) {
+                if (arr[i] == arr[j]) {
+                    return false; 
+                }
+            }
+        }
+        return true; 
+    }
+
     function getDigest(Data memory _data) internal view returns(bytes32 digest){
         digest = keccak256(
             abi.encodePacked(

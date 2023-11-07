@@ -121,6 +121,11 @@ contract Pledge is Initializable,Ownable,IPledge{
     mapping(uint256 => StakeTokenMsg) public stakeTokenMsg;  
     mapping(address => uint256) public userStakeTokenNum;  
     mapping(address => mapping(uint256 => uint256)) public userStakeTokenIndex;
+    mapping(address => address) nodeIdByAddr;  
+    mapping(address => address) nodeAddrById;  
+    mapping(address => address) walletById; 
+    event UpadeNodesMapping(address nodeId, address oldAddr, address newAddr);
+    event UpadeNodesWallet(address nodeId, address walAddr);
     event AddNodeAddr(address _nodeAddr);
     event DeleteNodeAddr(address _nodeAddr);
     event StakeToken(uint256 indexed _stakeIndex, address _userAddr, address _nodeAddr, uint256 _amount, uint256 _time);
@@ -149,6 +154,37 @@ contract Pledge is Initializable,Ownable,IPledge{
     
     fallback() payable external{
 
+    }
+
+    function updateMapping(
+        address[] calldata _nodeIds, 
+        address[] calldata _newAddrs,
+        address[] calldata _walAddrs
+        ) external onlyOwner{
+        require(_nodeIds.length == _newAddrs.length && _nodeIds.length == _walAddrs.length, "parameter length mismatch");
+        address _nodeId;
+        address _oldAddr;
+        address _newAddr;
+        address _walAddr;
+        for (uint256 i = 0; i< _nodeIds.length; i++){
+            _nodeId = _nodeIds[i];
+            _newAddr = _newAddrs[i];
+            _walAddr = _walAddrs[i];
+            require(nodeAddrSta[_nodeId],"not node addr");
+            if(_newAddr!=address(0)){
+                _oldAddr = getNodeAddrById(_nodeId);
+                require(!nodeAddrSta[_newAddr] && nodeIdByAddr[_newAddr] == address(0) && nodeAddrById[_newAddr] == address(0) , "node exist");
+                nodeIdByAddr[_newAddr] = _nodeId;
+                nodeAddrById[_nodeId] = _newAddr;
+                emit UpadeNodesMapping(_nodeId, _oldAddr, _newAddr);
+            }
+            if(_walAddr!=address(0)){
+                require(!nodeAddrSta[_walAddr] && nodeIdByAddr[_walAddr] == address(0) && nodeAddrById[_walAddr] == address(0) , "walAddr exist");
+                walletById[_nodeId] = _walAddr;
+                UpadeNodesWallet(_nodeId, _walAddr);
+            }
+            
+        }
     }
   
     /**
@@ -293,35 +329,83 @@ contract Pledge is Initializable,Ownable,IPledge{
             }
         }
     }
-
-    function queryNodeRank(uint256 start, uint256 end) external view returns (address[] memory, uint256[] memory) {
+   
+    function queryNodeRank(uint256 start, uint256 end) external view returns (address[] memory addrs, uint256[] memory amounts) {
+        (,addrs,,amounts) = _queryNode(start, end);
+    }
+    
+    function queryNodeAddrAndId(uint256 start, uint256 end) external view returns (address[] memory, address[] memory, address[] memory, uint256[] memory) {
+        return _queryNode(start, end);
+    }
+    
+    function _queryNode(uint256 start, uint256 end) internal view returns (address[] memory, address[] memory, address[] memory, uint256[] memory) {
         require(start > 0, "start must larger than 0");
         if (end > nodeNum){
             end = nodeNum;
         }
+        address[] memory _nodeIdArray = new address[](1) ;
+        address[] memory _walArray = new address[](1) ;
         address[] memory _addrArray = new address[](1) ;
         uint256[] memory _stakeAmount = new uint256[](1) ;
         uint256 j;
         if (end >= start){
             uint256 len = end.sub(start).add(1);
+            _nodeIdArray = new address[](len) ;
+            _walArray = new address[](len) ;
             _addrArray = new address[](len) ;
             _stakeAmount = new uint256[](len) ;
             for (uint256 i = start; i <= end; i++) {
                 address _nodeAddr = nodeIndexAddr[i];
-                _addrArray[j] = _nodeAddr;
+                _nodeIdArray[j] = _nodeAddr;
+                _addrArray[j] = getNodeAddrById(_nodeAddr);
+                _walArray[j] = walletById[_nodeAddr];
+                if(_walArray[j] == address(0))_walArray[j]=_nodeAddr;
                 _stakeAmount[j] = nodeStakeAmount[_nodeAddr];
                 j++;
             }
         }
-        return (_addrArray, _stakeAmount);
+        return (_nodeIdArray, _addrArray, _walArray, _stakeAmount);
     }
-    
+ 
     function queryNodeIndex(address _nodeAddr) external view returns(uint256){
-        return nodeAddrIndex[_nodeAddr];
+        address _nodeId = getNodeIdByAddr(_nodeAddr);
+        uint256 index = nodeAddrIndex[_nodeId];
+        if(getNodeAddrById(_nodeId) == _nodeAddr && _nodeAddr!= address(0)){
+            return index;
+        }else {
+            return 0;
+        }
     }
 
     function queryNodeStakeAmount(address _nodeAddr) external view returns(uint256){
         return nodeStakeAmount[_nodeAddr];
+    }
+
+    function getNodeWalById(address _nodeId) public view returns(address){
+        address _nodeAddr = walletById[_nodeId];
+        if(_nodeAddr == address(0) && nodeAddrSta[_nodeId]){
+            return _nodeId;
+        }else {
+            return _nodeAddr;  
+        }
+    }
+
+    function getNodeAddrById(address _nodeId) public view returns(address){
+        address _nodeAddr = nodeAddrById[_nodeId];
+        if(_nodeAddr == address(0) && nodeAddrSta[_nodeId]){
+            return _nodeId;
+        }else {
+            return _nodeAddr;  
+        }
+    }
+
+    function getNodeIdByAddr(address _nodeAddr) public view returns(address){
+        address _nodeId = nodeIdByAddr[_nodeAddr];
+        if(_nodeId == address(0) && nodeAddrSta[_nodeAddr] && nodeAddrById[_nodeAddr] == _nodeId){
+            return _nodeAddr;
+        }else {
+            return _nodeId;
+        }
     }
 
     function addNodeStake(uint256 _nodeAddrIndex) internal {

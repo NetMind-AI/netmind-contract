@@ -10,6 +10,10 @@ interface IPledgeContract {
     function queryNodeIndex(address _nodeAddr) external view returns(uint256);
 }
 
+interface IEfficacyContract {
+    function verfiyParams(address[2] calldata addrs,uint256[2] calldata uints,bytes32 code, bytes32 digest) external view returns(bool);
+}
+
 interface IConf {
     function Staking() external returns (address);
 }
@@ -120,6 +124,11 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     bool public pause;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => WithdrawData)) public withdrawData;
+    IEfficacyContract public efficacyContract;
+    address public exector;
+    uint256 public threshold;
+    mapping(uint256 => uint256) public withdrawLimit;
+    uint256 public signNum;
     event WithdrawToken(address indexed _userAddr, address _tokenAddr,uint256 _nonce, uint256 _amount);
 
     struct Data {
@@ -170,14 +179,28 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
 
     }
 
+    function updateExector(address _exector) external onlyOwner{
+        exector = _exector;
+    }
+
     function updatePause(bool _sta) external onlyOwner{
         pause = _sta;
     }
 
-    /**
-    * @notice A method to the user withdraw revenue.
-    * The extracted proceeds are signed by at least 11 servers, in order to withdraw successfully
-    */
+    function updateThreshold(uint256 _threshold) external onlyOwner{
+        threshold = _threshold;
+    }
+
+    function updateSignNum(uint256 _signNum) external onlyOwner{
+        require(_signNum > 18, "IncentiveContracts: parameter error");
+        signNum = _signNum;
+    }
+   
+    function close() external{
+        require(exector == msg.sender, "not exector");
+        pause = true;
+    }
+
     function withdrawToken(
         address[2] calldata addrs,
         uint256[2] calldata uints,
@@ -194,24 +217,28 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         uint256 counter;
         uint256 _nonce = nonce[addrs[0]]++;
         require(len*2 == rssMetadata.length, "RewardContract: Signature parameter length mismatch");
+        require(verfylimit(uints[0]),"Extraction limit exceeded");
         bytes32 digest = getDigest(Data( addrs[0], addrs[1], uints[0], uints[1]), _nonce);
+        address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
-            bool result = verifySign(
+            (bool result, address signAddr) = verifySign(
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
             if (result){
                 counter++;
+                signAddrs[i] = signAddr;
             }
-            if (counter >= 11){
+            if (counter >= 18){
                 break;
             }
         }
+        uint256 _signNum = (signNum != 0) ? signNum : 18;
         require(
-            counter >= 11,
+            counter >= _signNum,
             "The number of signed accounts did not reach the minimum threshold"
         );
-
+        require(areElementsUnique(signAddrs), "Signature parameter not unique");
         withdrawData[addrs[0]][_nonce] =  WithdrawData(addrs[1], uints[0]);
         if(addrs[1] == address(0x0)){
             require(address(this).balance >= uints[0], "Insufficient contract balance");
@@ -223,18 +250,34 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
                 "Token transfer failed"
             );
         }
-        
         emit WithdrawToken(addrs[0], addrs[1], _nonce, uints[0]);
     }
     
-    function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool)  {
+    function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool, address)  {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _accessAccount = ecrecover(hash, _sig.v, _sig.r, _sig.s);
         uint256 _nodeRank = IPledgeContract(conf.Staking()).queryNodeIndex(_accessAccount);
-        return _nodeRank < 22 && _nodeRank > 0;
+        return (_nodeRank < 22 && _nodeRank > 0, _accessAccount);
     }
     
+    function verfylimit(uint256 amount) internal returns (bool) {
+        uint256 day = block.timestamp/86400;
+        withdrawLimit[day] += amount;
+        return threshold > withdrawLimit[day];
+    }
+
+    function areElementsUnique(address[] memory arr) internal pure returns (bool) {
+        for(uint i = 0; i < arr.length - 1; i++) {
+            for(uint j = i + 1; j < arr.length; j++) {
+                if (arr[i] == arr[j]) {
+                    return false; 
+                }
+            }
+        }
+        return true; 
+    }
+
     function getDigest(Data memory _data, uint256 _nonce) internal view returns(bytes32 digest){
         digest = keccak256(
             abi.encodePacked(
