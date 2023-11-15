@@ -47,7 +47,6 @@ abstract contract Initializable {
 }
 
 contract Ledger is Initializable, ILedger{
-    using SafeMath for uint256;   
     IPledgeContract public pledgeContract;
     uint256 ledgerNum; 
     mapping(uint256 => LedgerMsg)  ledgerIndex;
@@ -197,31 +196,4 @@ contract Ledger is Initializable, ILedger{
         return (_ledgerMsg.consensusSta, _ledgerMsg.nodeVoteNum, _ledgerMsg.voteAddrList, _dataMsg.token, _dataMsg.amount, _dataMsg.txHash,_dataVotes);
     }
 }
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-}

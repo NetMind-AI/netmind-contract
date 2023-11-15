@@ -101,7 +101,7 @@ contract Management is IManagement{
         _proposalMsg.targetAddr = _targetAddr;
         _proposalMsg.addr = _addr;
         _proposalMsg.data = _data;
-        _proposalMsg.expire = _time.add(86400);
+        _proposalMsg.expire = _time.add(86400*3);
         _proposalMsg.typeIndex = _typeIndex;
         _proposalMsg.label = _label;
         _proposalMsg.voterSta[_sender] = true;
