@@ -181,7 +181,7 @@ contract Pledge is Initializable,Ownable,IPledge{
             if(_walAddr!=address(0)){
                 require(!nodeAddrSta[_walAddr] && nodeIdByAddr[_walAddr] == address(0) && nodeAddrById[_walAddr] == address(0) , "walAddr exist");
                 walletById[_nodeId] = _walAddr;
-                UpadeNodesWallet(_nodeId, _walAddr);
+                emit UpadeNodesWallet(_nodeId, _walAddr);
             }
             
         }

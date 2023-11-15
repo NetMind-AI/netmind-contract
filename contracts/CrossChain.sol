@@ -126,7 +126,7 @@ contract Crosschain  is Initializable,Ownable {
     uint256 public threshold;
     mapping(uint256 => uint256) public withdrawLimit;
     uint256 public signNum;
-    address public caller;
+    address public trader;
     event UpdatePause(bool sta);
     event WithdrawChargeAmount(address tokenAddr, uint256 amount);
     event AddNodeAddr(address[] nodeAddrs);
@@ -195,8 +195,8 @@ contract Crosschain  is Initializable,Ownable {
 
     }
 
-    function updateCaller(address _caller) external onlyOwner{
-        caller = _caller;
+    function updateTrader(address _trader) external onlyOwner{
+        trader = _trader;
     }
 
     function updateExector(address _exector) external onlyOwner{
@@ -323,7 +323,7 @@ contract Crosschain  is Initializable,Ownable {
         external
         onlyGuard
     {
-        require( caller == msg.sender, "Crosschain: The caller error");
+        require( trader == msg.sender, "Crosschain: The trader error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");
         require( !status[strs[0]][strs[1]], "Crosschain: The transaction has been withdrawn");
         status[strs[0]][strs[1]] = true;
