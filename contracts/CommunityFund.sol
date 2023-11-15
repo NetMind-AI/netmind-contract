@@ -107,7 +107,6 @@ contract Ownable is Initializable{
 }
 
 contract CommunityFund is ICommunityFund,Ownable{
-    using SafeMath for uint256;
     uint256 public votingPeriod;
     uint256 public proposalCount;                           
     mapping(uint256 => ProposalMsg) public proposalMsg;
@@ -233,14 +232,14 @@ contract CommunityFund is ICommunityFund,Ownable{
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         require(nodeAddrSta[targetAddr], "The receiving address is not the node address"); 
         uint256 _time = block.timestamp;
-        require(_time > LockTime.add(31536000 * 5), "Not yet unlocked"); 
+        require(_time > LockTime + 31536000 * 5, "Not yet unlocked"); 
         uint256 _proposalId = ++proposalCount;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
         _proposalMsg.proposalSponsor = _sender;
         _proposalMsg.content = content;
         _proposalMsg.targetAddr = targetAddr;
         _proposalMsg.amount = amount;
-        _proposalMsg.expire = _time.add(votingPeriod);
+        _proposalMsg.expire = _time + votingPeriod;
         _proposalMsg.allProposers.push(_sender);
         _proposalMsg.voterSta[_sender] = true;
         emit Propose(_sender, _proposalId, targetAddr, amount, content);
@@ -325,11 +324,11 @@ contract CommunityFund is ICommunityFund,Ownable{
                 _page = 1;
             }
             _page--;
-            uint256 start = _page.mul(_limit);
-            uint256 end = start.add(_limit);
+            uint256 start = _page * _limit;
+            uint256 end = start + _limit;
             if (end > _num){
                 end = _num;
-                _limit = end.sub(start);
+                _limit = end - start;
             }
             start = _num - start;
             end = _num - end; 
@@ -352,11 +351,11 @@ contract CommunityFund is ICommunityFund,Ownable{
                 _page = 1;
             }
             _page--;
-            uint256 start = _page.mul(_limit);
-            uint256 end = start.add(_limit);
+            uint256 start = _page * _limit;
+            uint256 end = start + _limit;
             if (end > _num){
                 end = _num;
-                _limit = end.sub(start);
+                _limit = end - start;
             }
             start = _num - start;
             end = _num - end; 
@@ -411,32 +410,4 @@ contract CommunityFund is ICommunityFund,Ownable{
         return nodes;
     }
 
-}
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
 }

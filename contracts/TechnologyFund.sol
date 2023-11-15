@@ -107,7 +107,6 @@ contract Ownable is Initializable{
 }
 
 contract TechnologyFund is ITechnologyFund,Ownable{
-    using SafeMath for uint256;
     uint256 public votingPeriod;
     uint256 public proposalCount;                           
     mapping(uint256 => ProposalMsg) public proposalMsg;
@@ -237,7 +236,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         _proposalMsg.content = content;
         _proposalMsg.targetAddr = targetAddr;
         _proposalMsg.amount = amount;
-        _proposalMsg.expire = block.timestamp.add(votingPeriod);
+        _proposalMsg.expire = block.timestamp + votingPeriod;
         _proposalMsg.allProposers.push(_sender);
         _proposalMsg.voterSta[_sender] = true;
         emit Propose(_sender, _proposalId, targetAddr, amount, content);
@@ -251,7 +250,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         require(_proposalMsg.expire > _time, "The vote on the proposal has expired");
         require(!_proposalMsg.voterSta[_sender], "The proposer has already voted");
         _verify(_proposalMsg.amount);
-        withdrawSum = withdrawSum.add(_proposalMsg.amount);
+        withdrawSum = withdrawSum + _proposalMsg.amount;
         _proposalMsg.allProposers.push(_sender);
         _proposalMsg.voterSta[_sender] = true;
         uint256 length = _proposalMsg.allProposers.length;
@@ -306,9 +305,9 @@ contract TechnologyFund is ITechnologyFund,Ownable{
 
     function _verify(uint256 amount) internal view{
         uint256 _time = block.timestamp;
-        uint256 _sum = _time.sub(LockTime).div(31536000).add(1).mul(unLockNum);
+        uint256 _sum = ((_time - LockTime) / 31536000 +1) * unLockNum;
         if(_sum > 1000000000 * 10**18) _sum = 1000000000 * 10**18;
-        require(_sum >= amount.add(withdrawSum), "Extractable quantity exceeded"); 
+        require(_sum >= amount + withdrawSum, "Extractable quantity exceeded"); 
     }
 
     function _votingProposalMsg(uint256 _page, uint256 _limit) internal view returns(uint256[] memory indexs, uint256 _num){
@@ -331,11 +330,11 @@ contract TechnologyFund is ITechnologyFund,Ownable{
                 _page = 1;
             }
             _page--;
-            uint256 start = _page.mul(_limit);
-            uint256 end = start.add(_limit);
+            uint256 start = _page * _limit;
+            uint256 end = start + _limit;
             if (end > _num){
                 end = _num;
-                _limit = end.sub(start);
+                _limit = end - start;
             }
             start = _num - start;
             end = _num - end; 
@@ -358,11 +357,11 @@ contract TechnologyFund is ITechnologyFund,Ownable{
                 _page = 1;
             }
             _page--;
-            uint256 start = _page.mul(_limit);
-            uint256 end = start.add(_limit);
+            uint256 start = _page * _limit;
+            uint256 end = start + _limit;
             if (end > _num){
                 end = _num;
-                _limit = end.sub(start);
+                _limit = end - start;
             }
             start = _num - start;
             end = _num - end; 
@@ -411,7 +410,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
 
     function queryUnlock() external view returns(uint256, uint256){
         uint256 _time = block.timestamp;
-        uint256 _sum = _time.sub(LockTime).div(31536000).add(1).mul(unLockNum);
+        uint256 _sum = ((_time - LockTime) / 31536000 + 1) * unLockNum;
         if(_sum > 1000000000 * 10**18) _sum = 1000000000 * 10**18;
         return (_sum, withdrawSum);
     }
@@ -424,32 +423,4 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         return nodes;
     }
 
-}
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
 }

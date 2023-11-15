@@ -111,7 +111,6 @@ contract Ownable is Initializable{
 }
 
 contract Pledge is Initializable,Ownable,IPledge{
-    using SafeMath for uint256;
     uint256 public  nodeNum;                           
     mapping(address => uint256) nodeAddrIndex;  
     mapping(uint256 => address) public nodeIndexAddr;  
@@ -274,7 +273,7 @@ contract Pledge is Initializable,Ownable,IPledge{
                 require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
                 _stakeTokenMsg.end = block.timestamp;
                 _amount += _stakeTokenMsg.tokenAmount;
-                nodeStakeAmount[_stakeTokenMsg.nodeAddr] = nodeStakeAmount[_stakeTokenMsg.nodeAddr].sub(_stakeTokenMsg.tokenAmount);
+                nodeStakeAmount[_stakeTokenMsg.nodeAddr] = nodeStakeAmount[_stakeTokenMsg.nodeAddr] - _stakeTokenMsg.tokenAmount;
                 if (nodeAddrSta[_stakeTokenMsg.nodeAddr]){           
                     cancelNodeStake(_stakeTokenMsg.nodeAddr);
                 }
@@ -305,11 +304,11 @@ contract Pledge is Initializable,Ownable,IPledge{
             _page = 1;
         }
         _page--;
-        uint256 start = _page.mul(_limit);
-        uint256 end = start.add(_limit);
+        uint256 start = _page * _limit;
+        uint256 end = start + _limit;
         if (end > _num){
             end = _num;
-            _limit = end.sub(start);
+            _limit = end - start;
         }
         nodeAddrs = new address[](_limit);
         stakeMsgData = new uint256[](_limit*4);
@@ -318,7 +317,7 @@ contract Pledge is Initializable,Ownable,IPledge{
             uint256 j;
             for (uint256 i = start; i < end; i++) {
                 uint256 _index;
-                _index = userStakeTokenIndex[_userAddr][i.add(1)];
+                _index = userStakeTokenIndex[_userAddr][i+ 1];
                 StakeTokenMsg memory _stakeTokenMsg = stakeTokenMsg[_index];
                 nodeAddrs[j] = _stakeTokenMsg.nodeAddr;
                 stakeMsgData[j*4] = _stakeTokenMsg.start;
@@ -349,7 +348,7 @@ contract Pledge is Initializable,Ownable,IPledge{
         uint256[] memory _stakeAmount = new uint256[](1) ;
         uint256 j;
         if (end >= start){
-            uint256 len = end.sub(start).add(1);
+            uint256 len = end - start + 1;
             _nodeIdArray = new address[](len) ;
             _walArray = new address[](len) ;
             _addrArray = new address[](len) ;
@@ -411,7 +410,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     function addNodeStake(uint256 _nodeAddrIndex) internal {
         for (uint256 i = _nodeAddrIndex; i > 1; i--) {
             address _nodeAddr = nodeIndexAddr[i];
-            uint256 _prefixIndex = i.sub(1);
+            uint256 _prefixIndex = i - 1;
             address prefixAddr = nodeIndexAddr[_prefixIndex];
             uint256 _nodeSum = nodeStakeAmount[_nodeAddr];
             uint256 _prefixSum = nodeStakeAmount[prefixAddr];
@@ -431,7 +430,7 @@ contract Pledge is Initializable,Ownable,IPledge{
         uint256 _nodeAddrIndex = nodeAddrIndex[_addr];
         for (uint256 i = _nodeAddrIndex; i < _nodeNum; i++) {
             address _nodeAddr = nodeIndexAddr[i];
-            uint256 _lastIndex = i.add(1);
+            uint256 _lastIndex = i + 1;
             address lastAddr = nodeIndexAddr[_lastIndex];
             uint256 _nodeSum = nodeStakeAmount[_nodeAddr];
             uint256 _lastSum = nodeStakeAmount[lastAddr];
@@ -447,31 +446,4 @@ contract Pledge is Initializable,Ownable,IPledge{
     }
 
 }
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-}
