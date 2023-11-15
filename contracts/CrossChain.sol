@@ -107,7 +107,6 @@ contract Ownable is Initializable{
 }
 
 contract Crosschain  is Initializable,Ownable {
-    using SafeMath for uint256;
     bool public pause;
     uint256 public nodeNum;
     uint256 public stakeNum;
@@ -304,8 +303,8 @@ contract Crosschain  is Initializable,Ownable {
             require(token.transferFrom(_sender,address(this),_amount), "Token transfer failed");
         }
         uint256 _fee = chargeRate[_chain][tokenAddr];
-        _amount = _amount.sub(_fee);
-        feeAmount[tokenAddr] = feeAmount[tokenAddr].add(_fee);
+        _amount = _amount - _fee;
+        feeAmount[tokenAddr] = feeAmount[tokenAddr] + _fee;
         stakeMsg[++stakeNum] = Stake(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
         if(!mainChainSta && _sta == 2){
             require(token.burn(_amount), "Token burn failed");
@@ -429,31 +428,4 @@ contract Crosschain  is Initializable,Ownable {
     }
     
 }
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-}
