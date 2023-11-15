@@ -282,12 +282,14 @@ contract AccountManage is Ownable{
         uint256 _nonce = nonce[addr]++;
         require(len*2 == rssMetadata.length, "Signature parameter length mismatch");
         bytes32 digest = getDigest(Data( addr, uints[0], uints[1]), _nonce);
+        address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
-            bool result = verifySign(
+            (bool result, address signAddr) = verifySign(
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
             if (result){
+                signAddrs[i] = signAddr;
                 counter++;
             }
             if (counter >= 11){
@@ -298,6 +300,7 @@ contract AccountManage is Ownable{
             counter >= 11,
             "The number of signed accounts did not reach the minimum threshold"
         );
+        require(areElementsUnique(signAddrs), "Signature parameter not unique");
         withdrawData[addr][_nonce] =  uints[0];
         payable(addr).transfer(uints[0]);
         providerFeeSum = providerFeeSum.sub(uints[0]);
@@ -318,12 +321,23 @@ contract AccountManage is Ownable{
         return (_userAccountMsg.balance, _userAccountMsg.freezed, _userAccountMsg.userId);
     }
 
-    function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool)  {
+    function areElementsUnique(address[] memory arr) internal pure returns (bool) {
+        for(uint i = 0; i < arr.length - 1; i++) {
+            for(uint j = i + 1; j < arr.length; j++) {
+                if (arr[i] == arr[j]) {
+                    return false; 
+                }
+            }
+        }
+        return true; 
+    }
+
+    function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool, address)  {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _accessAccount = ecrecover(hash, _sig.v, _sig.r, _sig.s);
         uint256 _nodeRank = IPledgeContract(IConf(conf).Staking()).queryNodeIndex(_accessAccount);
-        return _nodeRank < 22 && _nodeRank > 0;
+        return (_nodeRank < 22 && _nodeRank > 0, _accessAccount);
     }
     
     function getDigest(Data memory _data, uint256 _nonce) internal view returns(bytes32 digest){
