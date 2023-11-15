@@ -288,12 +288,9 @@ contract AccountManage is Ownable{
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
+            signAddrs[i] = signAddr;
             if (result){
-                signAddrs[i] = signAddr;
                 counter++;
-            }
-            if (counter >= 11){
-                break;
             }
         }
         require(

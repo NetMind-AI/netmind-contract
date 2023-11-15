@@ -337,8 +337,8 @@ contract Crosschain  is Initializable,Ownable {
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
+            signAddrs[i] = signAddr;
             if (result){
-                signAddrs[i] = signAddr;
                 counter++;
             }
         }

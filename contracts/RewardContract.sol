@@ -225,12 +225,9 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
                 digest,
                 Sig(vs[i], rssMetadata[i*2], rssMetadata[i*2+1])
             );
+            signAddrs[i] = signAddr;
             if (result){
                 counter++;
-                signAddrs[i] = signAddr;
-            }
-            if (counter >= 18){
-                break;
             }
         }
         uint256 _signNum = (signNum != 0) ? signNum : 18;
