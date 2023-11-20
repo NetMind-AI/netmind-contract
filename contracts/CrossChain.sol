@@ -122,8 +122,8 @@ contract Crosschain  is Initializable,Ownable {
     mapping(address => bool) public nodeAddrSta;
     mapping(uint256 => Stake) public stakeMsg;
     address public exector;
-    uint256 public threshold;
-    mapping(uint256 => uint256) public withdrawLimit;
+    mapping(address => uint256) public threshold;
+    mapping(address => mapping(uint256 => uint256)) public withdrawLimit;
     uint256 public signNum;
     address public trader;
     event UpdatePause(bool sta);
@@ -133,6 +133,7 @@ contract Crosschain  is Initializable,Ownable {
     event UpdateChainCharge(string chain, bool sta, address[] tokens, uint256[] fees);
     event TransferToken(address indexed _tokenAddr, address _receiveAddr, uint256 _amount, string chain, string txid);
     event StakeToken(address indexed _tokenAddr, address indexed _userAddr, string receiveAddr, uint256 amount, uint256 fee,string chain);
+    event UpdateThreshold(address tokenAddr, uint256 threshold);
     
     struct Data {
         address userAddr;
@@ -202,8 +203,12 @@ contract Crosschain  is Initializable,Ownable {
         exector = _exector;
     }
 
-    function updateThreshold(uint256 _threshold) external onlyOwner{
-        threshold = _threshold;
+    function updateThreshold(address[] calldata _tokens, uint256[] calldata _thresholds) external onlyOwner{
+        require(_tokens.length == _thresholds.length, "Parameter array length does not match");
+        for (uint256 i = 0; i< _tokens.length; i++){
+            threshold[_tokens[i]] = _thresholds[i];
+            emit UpdateThreshold(_tokens[i], _thresholds[i]);
+        }
     }
 
     function updateSignNum(uint256 _signNum) external onlyOwner{
@@ -294,7 +299,7 @@ contract Crosschain  is Initializable,Ownable {
         require( chainSta[_chain], "Crosschain: The chain does not support transfer");
         uint256 _sta = tokenSta[tokenAddr];
         IERC20 token = IERC20(tokenAddr);
-        require(verfylimit(_amount),"Extraction limit exceeded");
+        require(verfylimit(tokenAddr, _amount),"Extraction limit exceeded");
         if(mainChainSta){
             _amount = msg.value;
             require(_amount > 0, "Value must be greater than 0");
@@ -330,7 +335,7 @@ contract Crosschain  is Initializable,Ownable {
         uint256 len = vs.length;
         uint256 counter;
         require(len*2 == rssMetadata.length, "Crosschain: Signature parameter length mismatch");
-        require(verfylimit(uints[0]),"Extraction limit exceeded");
+        require(verfylimit(addrs[0], uints[0]),"Extraction limit exceeded");
         bytes32 digest = getDigest(Data( addrs[0], addrs[1], uints[0], uints[1], strs[0], strs[1]));
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
@@ -401,10 +406,10 @@ contract Crosschain  is Initializable,Ownable {
         return (nodeAddrSta[_nodeAddr], _nodeAddr);
     }
     
-    function verfylimit(uint256 amount) internal returns (bool) {
+    function verfylimit(address token, uint256 amount) internal returns (bool) {
         uint256 day = block.timestamp/86400;
-        withdrawLimit[day] += amount;
-        return threshold > withdrawLimit[day];
+        withdrawLimit[token][day] += amount;
+        return threshold[token] > withdrawLimit[token][day];
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
