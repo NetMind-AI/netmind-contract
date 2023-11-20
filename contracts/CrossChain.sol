@@ -335,7 +335,7 @@ contract Crosschain  is Initializable,Ownable {
         uint256 len = vs.length;
         uint256 counter;
         require(len*2 == rssMetadata.length, "Crosschain: Signature parameter length mismatch");
-        require(verfylimit(addrs[0], uints[0]),"Extraction limit exceeded");
+        require(verfylimit(addrs[1], uints[0]),"Extraction limit exceeded");
         bytes32 digest = getDigest(Data( addrs[0], addrs[1], uints[0], uints[1], strs[0], strs[1]));
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
@@ -350,7 +350,7 @@ contract Crosschain  is Initializable,Ownable {
         }
         uint256 _signNum = (signNum != 0) ? signNum : nodeNum/2;
         require(
-            counter >= _signNum,
+            counter > _signNum,
             "The number of signed accounts did not reach the minimum threshold"
         );
         require(areElementsUnique(signAddrs), "Signature parameter not unique");
