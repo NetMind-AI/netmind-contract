@@ -12,7 +12,9 @@ interface IManagement {
     function updateProxyAdminPropose(address _targetAddr, address _addr) external;
     function updateProxyUpgradPropose(address _targetAddr, address _addr) external;
     function excContractPropose(address _targetAddr, bytes memory _data) external;
+    function excContractProposes(address[] calldata _targetAddrs, bytes[] calldata _datas) external;
     function vote(uint256 _proposalId) external;
+    function votes(uint256[] calldata _proposalIds) external;
 
 }
 
@@ -79,8 +81,18 @@ contract Management is IManagement{
     function updateProxyUpgradPropose(address _targetAddr, address _addr) override external{
         _propose(_targetAddr, _addr, new bytes(0x00), 5, "updateProxyUpgrad");
     }
-   
+    
+    function excContractProposes(address[] calldata _targetAddrs, bytes[] calldata _datas) override external{
+        for(uint i=0; i<_targetAddrs.length; i++){
+            _excContractPropose(_targetAddrs[i], _datas[i]);
+        }
+    }
+    
     function excContractPropose(address _targetAddr, bytes memory _data) override external{
+        _excContractPropose(_targetAddr, _data);
+    }
+  
+    function _excContractPropose(address _targetAddr, bytes memory _data) internal{
         require(bytesToUint(_data) != 2401778032 && bytesToUint(_data) != 822583150, "Calls to methods of proxy contracts are not allowed");
         _propose(_targetAddr, address(0), _data, 6, "excContract");
     }
@@ -109,6 +121,16 @@ contract Management is IManagement{
     }
     
     function vote(uint256 _proposalId) override external nonReentrant(){
+        _vote(_proposalId);
+    }
+       
+    function votes(uint256[] calldata _proposalIds) override external nonReentrant(){
+        for(uint i=0; i<_proposalIds.length; i++){
+            _vote(_proposalIds[i]);
+        }
+    }
+         
+    function _vote(uint256 _proposalId) internal {
         address _sender = msg.sender;
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         uint256 _time = block.timestamp;
