@@ -230,12 +230,6 @@ contract Pledge is Initializable,Ownable,IPledge{
         }
     }
 
-    /**
-    * @notice A method in which users Stake stake to trusted nodes. 
-    * The nodes must be in the top 11 of the Stake, 
-    * and the user's Stake can obtain the Stake income
-    * @param _nodeAddr trusted node
-    */
     function stake(address _nodeAddr) override payable external onlyNodeAddr(_nodeAddr){
         uint256 _amount = msg.value;
         require(_amount > 0, "The pledge amount cannot be less than the minimum value");
@@ -256,7 +250,6 @@ contract Pledge is Initializable,Ownable,IPledge{
         addNodeStake(_nodeAddrIndex);
         emit StakeToken(_stakeTokenNum, _sender, _nodeAddr, _amount, block.timestamp);
     }
-    
     
     /**
     * @notice A method to the user cancels the stake

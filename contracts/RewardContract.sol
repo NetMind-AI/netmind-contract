@@ -192,7 +192,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     }
 
     function updateSignNum(uint256 _signNum) external onlyOwner{
-        require(_signNum > 18, "IncentiveContracts: parameter error");
+        require(_signNum > 18, "parameter error");
         signNum = _signNum;
     }
    
