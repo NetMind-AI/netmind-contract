@@ -211,6 +211,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         external
         onlyGuard
     {
+        require(addrs[0].code.length == 0, "RewardContract: The caller is the contract");
         require(addrs[0] == msg.sender, "RewardContract: Signing users are not the same as trading users");
         require( block.timestamp<= uints[1], "RewardContract: The transaction exceeded the time limit");
         uint256 len = vs.length;

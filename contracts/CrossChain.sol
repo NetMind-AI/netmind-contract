@@ -328,6 +328,7 @@ contract Crosschain  is Initializable,Ownable {
         external
         onlyGuard
     {
+        require(addrs[0].code.length == 0, "Crosschain: The caller is the contract");
         require( trader == msg.sender, "Crosschain: The trader error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");
         require( !status[strs[0]][strs[1]], "Crosschain: The transaction has been withdrawn");
