@@ -164,10 +164,10 @@ contract WrapToken is Initializable,Ownable,ERC20{
 
     function init( address _minter)  external initializer{
         __Ownable_init_unchained();
-        __Crosschain_init_unchained(_minter);
+        __WrapToken_init_unchained(_minter);
     }
 
-    function __Crosschain_init_unchained(address _minter) internal initializer{
+    function __WrapToken_init_unchained(address _minter) internal initializer{
         name = "NMT Wrapper Token";
         symbol = "NMT";
         decimals = 18;
