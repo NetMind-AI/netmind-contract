@@ -123,6 +123,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     mapping(address => address) nodeIdByAddr;  
     mapping(address => address) nodeAddrById;  
     mapping(address => address) walletById; 
+    bool private reentrancyLock = false;
     event UpadeNodesMapping(address nodeId, address oldAddr, address newAddr);
     event UpadeNodesWallet(address nodeId, address walAddr);
     event AddNodeAddr(address _nodeAddr);
@@ -141,6 +142,13 @@ contract Pledge is Initializable,Ownable,IPledge{
     modifier onlyNodeAddr(address _nodeAddr) {
         require(nodeAddrSta[_nodeAddr], "StakeContract: The Stake address is not a node address");
         _;
+    }
+
+    modifier nonReentrant() {
+        require(!reentrancyLock);
+        reentrancyLock = true;
+        _;
+        reentrancyLock = false;
     }
 
     function init() external initializer{
@@ -230,7 +238,7 @@ contract Pledge is Initializable,Ownable,IPledge{
         }
     }
 
-    function stake(address _nodeAddr) override payable external onlyNodeAddr(_nodeAddr){
+    function stake(address _nodeAddr) override payable external onlyNodeAddr(_nodeAddr) nonReentrant(){
         uint256 _amount = msg.value;
         require(_amount > 0, "The pledge amount cannot be less than the minimum value");
         address _sender = msg.sender;
@@ -255,7 +263,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     * @notice A method to the user cancels the stake
     * @param _indexs the user stake a collection of ids
     */
-    function cancleStake(uint256[] calldata _indexs) override external {
+    function cancleStake(uint256[] calldata _indexs) override external nonReentrant(){
         address _sender = msg.sender;
         uint256 _amount;
         for (uint256 i = 0; i < _indexs.length; i++) {
