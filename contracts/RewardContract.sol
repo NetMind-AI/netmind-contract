@@ -10,10 +10,6 @@ interface IPledgeContract {
     function queryNodeIndex(address _nodeAddr) external view returns(uint256);
 }
 
-interface IEfficacyContract {
-    function verfiyParams(address[2] calldata addrs,uint256[2] calldata uints,bytes32 code, bytes32 digest) external view returns(bool);
-}
-
 interface IConf {
     function Staking() external returns (address);
 }
@@ -124,7 +120,6 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     bool public pause;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => WithdrawData)) public withdrawData;
-    IEfficacyContract public efficacyContract;
     address public exector;
     uint256 public threshold;
     mapping(uint256 => uint256) public withdrawLimit;
