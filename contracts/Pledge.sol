@@ -123,7 +123,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     mapping(address => address) nodeIdByAddr;  
     mapping(address => address) nodeAddrById;  
     mapping(address => address) walletById; 
-    bool private reentrancyLock = false;
+    bool private reentrancyLock;
     event UpadeNodesMapping(address nodeId, address oldAddr, address newAddr);
     event UpadeNodesWallet(address nodeId, address walAddr);
     event AddNodeAddr(address _nodeAddr);
@@ -448,3 +448,4 @@ contract Pledge is Initializable,Ownable,IPledge{
 
 }
 
+        
