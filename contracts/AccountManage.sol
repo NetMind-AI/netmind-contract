@@ -122,6 +122,7 @@ contract AccountManage is Ownable{
     bytes32 public DOMAIN_SEPARATOR;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => uint256)) public withdrawData;
+    uint256 public signNum;
     
     event WithdrawToken(address indexed _userAddr, uint256 _nonce, uint256 _amount);
     event UpdateAuthSta(address _addr, bool sta);
@@ -186,6 +187,11 @@ contract AccountManage is Ownable{
         );
     }
  
+    function updateSignNum(uint256 _signNum) external onlyOwner{
+        require(_signNum > 18, "parameter error");
+        signNum = _signNum;
+    }
+
     function updateAuthSta(address _addr, bool _sta) external onlyOwner{
         authSta[_addr] = _sta;
         emit UpdateAuthSta(_addr, _sta);
@@ -274,7 +280,8 @@ contract AccountManage is Ownable{
         bytes32[] calldata rssMetadata
     )
         external
-    {
+    {   
+        require(addr.code.length == 0, "The caller is the contract");
         require(providerFeeSum >= uints[0], "Withdrawal quantity exceeds available quantity");
         require( block.timestamp<= uints[1], "The transaction exceeded the time limit");
         uint256 len = vs.length;
@@ -293,8 +300,9 @@ contract AccountManage is Ownable{
                 counter++;
             }
         }
+        uint256 _signNum = (signNum != 0) ? signNum : 18;
         require(
-            counter >= 11,
+            counter >= _signNum,
             "The number of signed accounts did not reach the minimum threshold"
         );
         require(areElementsUnique(signAddrs), "Signature parameter not unique");
