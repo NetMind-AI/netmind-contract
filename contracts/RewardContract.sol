@@ -114,6 +114,7 @@ contract Ownable is Initializable{
         _owner = newOwner;
     }
 }
+
 contract RewardContract is Initializable,Ownable,IRewardContract {
     IConf public conf;
     bytes32 public DOMAIN_SEPARATOR;
@@ -124,6 +125,25 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     uint256 public threshold;
     mapping(uint256 => uint256) public withdrawLimit;
     uint256 public signNum;
+    address public blacker;
+    mapping(address => bool) public blacklist;
+
+    modifier onlyBlocker{
+        require(msg.sender == blacker, "Reward Contract: only blocker");
+        _;
+    }
+    function setBlacker(address guy) public onlyOwner{
+        blacker = guy;
+    }
+    
+    function addBlacklist(address guy) public onlyBlocker {
+        blacklist[guy] = true;
+    }
+
+    function removeBlacklist(address guy) public onlyOwner{
+        blacklist[guy] = false;
+    }
+
     event WithdrawToken(address indexed _userAddr, address _tokenAddr,uint256 _nonce, uint256 _amount);
 
     struct Data {
@@ -205,9 +225,9 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         override
         external
         onlyGuard
-    {
+    {   
         require(addrs[0].code.length == 0, "RewardContract: The caller is the contract");
-        require(addrs[0] == msg.sender, "RewardContract: Signing users are not the same as trading users");
+        require(addrs[0] == msg.sender && !blacklist[msg.sender], "RewardContract: access denied");
         require( block.timestamp<= uints[1], "RewardContract: The transaction exceeded the time limit");
         uint256 len = vs.length;
         uint256 counter;
