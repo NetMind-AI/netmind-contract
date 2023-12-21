@@ -11,8 +11,8 @@ interface ILedger {
     )  external;
 }
 
-interface Irecorder {
-    function auth(address ) external view returns(bool);
+interface Iconf {
+    function acts(address ) external view returns(bool);
 }
 
 abstract contract Initializable {
@@ -47,7 +47,7 @@ abstract contract Initializable {
 }
 
 contract Ledger is Initializable, ILedger{
-    Irecorder public recorder;
+    Iconf public conf;
     uint256 ledgerNum; 
     mapping(uint256 => LedgerMsg)  ledgerIndex;
     mapping(address => mapping(uint256 => uint256)) ledgerMsg;
@@ -73,8 +73,8 @@ contract Ledger is Initializable, ILedger{
         bool consensusSta;       
     }
 
-    function init(address _recorder) external initializer{
-        recorder = Irecorder(_recorder);
+    function init(address _conf) external initializer{
+        conf = Iconf(_conf);
     }
     
     function updateLedger(
@@ -92,7 +92,7 @@ contract Ledger is Initializable, ILedger{
         require(_txHashs.length == _amounts.length , "Number of parameters does not match"); 
         //uint256 _nodeRank = pledgeContract.queryNodeIndex(_sender);
         //require(_nodeRank < 22 && _nodeRank > 0, "The caller is not the nodeAddr"); 
-        require(recorder.auth(_sender), "only recorder");
+        require(conf.acts(_sender), "only accountant");
         for (uint256 i=0; i < len; i++){
              _updatLedger(_userAddrs[i],_nonces[i],_tokenAddrs[i],_amounts[i],_txHashs[i],_sender);
         }
@@ -189,3 +189,4 @@ contract Ledger is Initializable, ILedger{
         return (_ledgerMsg.consensusSta, _ledgerMsg.nodeVoteNum, _ledgerMsg.voteAddrList, _dataMsg.token, _dataMsg.amount, _dataMsg.txHash,_dataVotes);
     }
 }
+
