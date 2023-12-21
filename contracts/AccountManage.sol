@@ -6,11 +6,9 @@ interface IConf {
     function v_settlement() external returns (uint256);
     function accountManageExecutor() external returns (address);
     function Staking() external returns (address);
+    function acts(address ) external view returns(bool);
 }
 
-interface IPledgeContract {
-    function queryNodeIndex(address _nodeAddr) external view returns(uint256);
-}
 
 abstract contract Initializable {
     /**
@@ -106,6 +104,35 @@ contract Ownable is Initializable{
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
+    }
+}
+
+library SafeMath {
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
+        }
+        uint256 c = a * b;
+        assert(c / a == b);
+        return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // assert(b > 0); // Solidity automatically throws when dividing by 0
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        assert(b <= a);
+        return a - b;
+    }
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        assert(c >= a);
+        return c;
     }
 }
 
@@ -336,13 +363,16 @@ contract AccountManage is Ownable{
         }
         return true; 
     }
-
-    function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool, address)  {
+     
+    function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
-        address _accessAccount = ecrecover(hash, _sig.v, _sig.r, _sig.s);
-        uint256 _nodeRank = IPledgeContract(IConf(conf).Staking()).queryNodeIndex(_accessAccount);
-        return (_nodeRank < 22 && _nodeRank > 0, _accessAccount);
+        address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        //uint256 _nodeRank = IPledgeContract(IConf(conf).Staking()).queryNodeIndex(_accessAccount);
+        //return (_nodeRank < 22 && _nodeRank > 0, _accessAccount);
+        bool isActs = IConf(conf).acts(signer); 
+
+        return(isActs, signer); 
     }
     
     function getDigest(Data memory _data, uint256 _nonce) internal view returns(bytes32 digest){
@@ -353,34 +383,5 @@ contract AccountManage is Ownable{
                 keccak256(abi.encode(_data.userAddr, _data.amount, _data.expiration, _nonce))
             )
         );
-    }
-}
-
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
     }
 }
