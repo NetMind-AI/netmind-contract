@@ -10,8 +10,8 @@ interface ISnapshoot {
     )  external;
 }
 
-interface Irecorder {
-    function auth(address ) external view returns(bool);
+interface Iconf {
+    function acts(address ) external view returns(bool);
 }
 
 abstract contract Initializable {
@@ -46,7 +46,7 @@ abstract contract Initializable {
 }
 
 contract Snapshoot is Initializable, ISnapshoot{
-    Irecorder  public recorder;
+    Iconf public conf;
     uint256 public startDay;
     uint256 snapshootNum; 
     mapping(uint256 => SnapshootMsg)  snapshootIndex;
@@ -74,8 +74,8 @@ contract Snapshoot is Initializable, ISnapshoot{
         uint256  time;      
     }
 
-    function init(address _reorder) external initializer{
-        recorder = Irecorder(_reorder);
+    function init(address _conf) external initializer{
+        conf = Iconf(_conf);
         startDay = (block.timestamp + 9900) / 86400;
     }
 
@@ -93,7 +93,7 @@ contract Snapshoot is Initializable, ISnapshoot{
         require(_dataHashs.length == _dataIds.length , "Number of parameters does not match"); 
         //uint256 _nodeRank = pledgeContract.queryNodeIndex(_sender);
         //require(_nodeRank < 22 && _nodeRank > 0, "The caller is not the nodeAddr"); 
-        require(recorder.auth(_sender), "only recorder");
+        require(conf.acts(_sender), "only accountant");
         for (uint256 i=0; i < len; i++){
              _updatSnapshoot(_types[i],_days[i],_dataHashs[i],_dataIds[i],_sender);
         }
