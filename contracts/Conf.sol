@@ -41,14 +41,17 @@ contract Conf is Initialize {
 
     // --- Payment ---
     uint256 public p_settlement;     //novc-settlement proportion => 50%    [THD]
-    uint256 public N;                //
+    uint256 public N;                
     address public accountManageExecutor;
     address public priceServiceExecutor;
     address public trainingTaskExecutor;
     uint256 public v_settlement;     //vc-settlement proportion => 80%    [THD]
-    uint256 public fmr_awd;     //Fully Managed Rewards => 1.1    [THD]
-    uint256 public non_vc_awd;     //Only non-VC mode rewards => 0.95    [THD]
-    uint256 public vc_awd;     //Only VC mode rewards  => 1    [THD]
+    uint256 public fmr_awd;          //Fully Managed Rewards => 1.1       [THD]
+    uint256 public non_vc_awd;       //Only non-VC mode rewards => 0.95   [THD]
+    uint256 public vc_awd;           //Only VC mode rewards  => 1         [THD]
+
+    // --- Accountant ---
+    mapping(address=> bool) public acts;  //accountants is the signer of ledger, snapshot and accountMange.       
 
     function initialize() external init {
         begin = block.timestamp;
@@ -56,8 +59,8 @@ contract Conf is Initialize {
         wards[msg.sender] = 1;
     }
 
-    function files(string[] calldata whats, address[] calldata dsts) external auth {
-         require(whats.length == dsts.length, "Number of parameters does not match"); 
+    function files(string[] calldata whats, address[] calldata dstas) external auth {
+         require(whats.length == dstas.length, "Number of parameters does not match"); 
          bytes32 result;
          string memory str;
          for (uint256 i = 0; i < whats.length; i++) { 
@@ -65,7 +68,7 @@ contract Conf is Initialize {
             assembly{
                  result := mload(add(str,32))
             }
-            file(result, dsts[i]);
+            file(result, dstas[i]);
          }
      }
 
@@ -80,7 +83,8 @@ contract Conf is Initialize {
             }
             file(result, datas[i]);
          }
-     }
+    }
+
     // --- Administration ---
     function file(bytes32 what, address dst) public auth {
         if (what == "WNMT") WNMT = dst;
@@ -94,6 +98,7 @@ contract Conf is Initialize {
         else if (what == "PriceServiceExecutor") priceServiceExecutor = dst;
         else if (what == "TrainingTaskExecutor") trainingTaskExecutor = dst;
     }
+
     function file(bytes32 what, uint data) public auth {
         if (what == "miner_awd_1") miner_awd_1 = data;
         else if (what == "miner_awd_2") miner_awd_2 = data;
@@ -108,6 +113,10 @@ contract Conf is Initialize {
         else if (what == "fmr_awd") fmr_awd = data;
         else if (what == "non_vc_awd") non_vc_awd = data;
         else if (what == "vc_awd") vc_awd = data;
+    }
+
+    function file(address act, bool flag) public auth {
+        acts[act] = flag;
     }
 
     function getAwradMSG() public view 
