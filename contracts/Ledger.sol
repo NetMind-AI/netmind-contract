@@ -129,7 +129,7 @@ contract Ledger is Initializable, ILedger{
             }
             _ledgerMsg.dataVotes[_dataFlag]++;
             uint256 _nodeVoteNum = ++_ledgerMsg.nodeVoteNum;
-            if(_nodeVoteNum > 11){
+            if(_nodeVoteNum > 0){
                 _dataRank(_userAddr, _nonce, _ledgerMsg);
             }
         }
@@ -151,10 +151,10 @@ contract Ledger is Initializable, ILedger{
         }
         uint256 _dataFlag = _ledgerMsg.dataIndexFlag[1];
         DataMsg memory _dataMsg = _ledgerMsg.dataFlag[_dataFlag];
-        if(_ledgerMsg.dataVotes[_dataFlag] > 11){
+        if(_ledgerMsg.dataVotes[_dataFlag] >= 2){
             _ledgerMsg.consensusSta = true;
             emit UpdateLedger(_userAddr, _nonce, _dataMsg.token, _dataMsg.amount, _dataMsg.txHash);
-        }else if(_ledgerMsg.nodeVoteNum > 16){
+        }else if(_ledgerMsg.nodeVoteNum > 2){
             uint256 _ledgerNum = ++ledgerNum;
             ledgerMsg[_userAddr][_nonce] = _ledgerNum;
             emit UpdateLedgerFail(_userAddr, _nonce, _dataMsg.token, _dataMsg.amount, _dataMsg.txHash);
