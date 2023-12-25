@@ -151,11 +151,11 @@ contract Snapshoot is Initializable, ISnapshoot{
         }
         uint256 _dataFlag = _snapshootMsg.dataIndexFlag[1];
         DataMsg memory _dataMsg = _snapshootMsg.dataFlag[_dataFlag];
-        if(_snapshootMsg.dataVotes[_dataFlag] > 11){
+        if(_snapshootMsg.dataVotes[_dataFlag] >= 2){
             _snapshootMsg.consensusSta = 1;
             _snapshootMsg.time = block.timestamp;
             emit UpdateSnapshoot(_type, _day, _dataMsg.dataHash, _dataMsg.dataId);
-        }else if(_snapshootMsg.nodeVoteNum > 16){
+        }else if(_snapshootMsg.nodeVoteNum > 2){
             _snapshootMsg.consensusSta = 2;
             _snapshootMsg.time = block.timestamp;
             uint256 _snapshootNum = ++snapshootNum;
