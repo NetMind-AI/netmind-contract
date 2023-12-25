@@ -215,7 +215,6 @@ contract AccountManage is Ownable{
     }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
-        require(_signNum > 18, "parameter error");
         signNum = _signNum;
     }
 
@@ -327,9 +326,9 @@ contract AccountManage is Ownable{
                 counter++;
             }
         }
-        uint256 _signNum = (signNum != 0) ? signNum : 18;
+       
         require(
-            counter >= _signNum,
+            counter >= signNum,
             "The number of signed accounts did not reach the minimum threshold"
         );
         require(areElementsUnique(signAddrs), "Signature parameter not unique");
