@@ -51,7 +51,7 @@ contract Conf is Initialize {
     uint256 public vc_awd;           //Only VC mode rewards  => 1         [THD]
 
     // --- Accountant ---
-    mapping(address=> bool) public acts;  //accountants is the signer of ledger, snapshot and accountMange.       
+    mapping(address=> bool) public acts;  //accountants is the signer of ledger, snapshot, accountMange and rewardPool     
 
     function initialize() external init {
         begin = block.timestamp;
