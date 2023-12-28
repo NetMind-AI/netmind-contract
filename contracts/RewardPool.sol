@@ -113,6 +113,9 @@ contract RewardPool is Initializable, Ownable {
     uint256 public Nonce;
     mapping(uint256 => uint256) public DailyMoved;
 
+    //manage move amount
+    uint256 public Moveable;
+
     event Move(uint256 indexed day, uint256 timestamp, address op, uint256 amt);
 
     struct Sig {
@@ -121,11 +124,24 @@ contract RewardPool is Initializable, Ownable {
         bytes32 s;
     }
 
-    function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum) public initializer{
+    function setMoveable(uint256  amt) public onlyOwner{
+        Moveable = amt;
+    }
+
+    function setSigNum(uint256 num) public onlyOwner{
+        SigNum = num;
+    }
+    
+    function setDailyMaxMove(uint256 amt) public onlyOwner{
+        DailyMaxMove = amt;
+    }
+
+    function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable) public initializer{
         conf = _conf;
         Rewardcontract = _reward;
         DailyMaxMove = _dailymaxmove;
         SigNum = _signum;
+        Moveable = _moveable;
 
         __Ownable_init_unchained();
 
@@ -141,14 +157,15 @@ contract RewardPool is Initializable, Ownable {
     }
 
     function move(uint256 nonce, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public{
+        //check input
         require(nonce == Nonce++, "error nonce");
+        require(amt <= Moveable, "out of moveable");
         require(block.timestamp <= expir, "sign expired");
         
         //check sign
         uint256 counter;
         uint256 len = vs.length;
         require(len*2 == rs.length, "Signature parameter length mismatch");
-
         bytes32 digest = getDigest(nonce, amt, expir);
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
@@ -158,15 +175,14 @@ contract RewardPool is Initializable, Ownable {
                 counter++;
             }
         }
-
         require(counter >= SigNum, "lack of signature");
-
         require(areElementsUnique(signAddrs), "duplicate signature");
 
         //move 
         uint256 day = block.timestamp / 1 days;
         DailyMoved[day]+= amt;
         require(DailyMoved[day] <= DailyMaxMove, "Out of daily max move");
+        Moveable -= amt;
         payable(Rewardcontract).transfer(amt);
     
         emit Move(day, block.timestamp, msg.sender, amt);
