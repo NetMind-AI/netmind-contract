@@ -299,7 +299,6 @@ contract Crosschain  is Initializable,Ownable {
         require( chainSta[_chain], "Crosschain: The chain does not support transfer");
         uint256 _sta = tokenSta[tokenAddr];
         IERC20 token = IERC20(tokenAddr);
-        require(verfylimit(tokenAddr, _amount),"Extraction limit exceeded");
         if(mainChainSta){
             _amount = msg.value;
             require(_amount > 0, "Value must be greater than 0");
@@ -308,6 +307,7 @@ contract Crosschain  is Initializable,Ownable {
             require(_sta > 0, "Incorrect token state setting");
             require(token.transferFrom(_sender,address(this),_amount), "Token transfer failed");
         }
+        require(verfylimit(tokenAddr, _amount),"Extraction limit exceeded");
         uint256 _fee = chargeRate[_chain][tokenAddr];
         _amount = _amount - _fee;
         feeAmount[tokenAddr] = feeAmount[tokenAddr] + _fee;
