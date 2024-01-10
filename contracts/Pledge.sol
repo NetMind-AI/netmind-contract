@@ -152,7 +152,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     }
 
     modifier onlyNodeAddr(address _nodeAddr) {
-        require(nodeAddrSta[_nodeAddr], "StakeContract: The Stake address is not a node address");
+        require(nodeAddrSta[_nodeAddr], "The Stake address is not a node address");
         _;
     }
 
@@ -164,7 +164,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     }
 
     modifier onlyGuarder() {
-        require(msg.sender == guarder, "PledgeContract: caller is not the guarder");
+        require(msg.sender == guarder, "caller is not the guarder");
         _;
     }
 
@@ -506,9 +506,9 @@ contract Pledge is Initializable,Ownable,IPledge{
 
     function updateChainList(string calldata chain, address[] calldata addrs, uint256[] calldata uints) internal {
         uint256 len = uints.length;
-        require(addrs.length == len, "PledgeContract: Parameter array length does not match");
+        require(addrs.length == len, "Parameter array length does not match");
         for (uint256 i = 0; i < len; i++) {
-           require(nodeAddrSta[addrs[i]], "PledgeContract: The pledge address is not a node address");
+           require(nodeAddrSta[addrs[i]], "The pledge address is not a node address");
         }
         uint256 _index = chainsIndex[chain];
         if(_index == 0){
