@@ -113,6 +113,7 @@ contract Payment is Initializable, Ownable {
     struct recipt{
        address payer;
        uint256 amount;
+       uint256 worth;
        uint256 refund;
        uint256 timestamp;
     }
@@ -123,8 +124,8 @@ contract Payment is Initializable, Ownable {
         bytes32 s;
     }
 
-    event Pay(address indexed payer, uint256 amount);
-    event Refund(address indexed payer, uint256 amount);
+    event Pay(string id, address payer, uint256 amount, uint256 worth);
+    event Refund(string id, address payer, uint256 amount);
 
     function init(address _conf, uint256 _signum) public initializer{
         conf = _conf;
@@ -143,7 +144,7 @@ contract Payment is Initializable, Ownable {
         );
     }
 
-    function payment(string memory paymentId, uint256 amt) public payable{
+    function payment(string memory paymentId, uint256 amt, uint256 worth) public payable{
          recipt storage R = recipts[paymentId];
          require(R.amount <= 0, "invalid payment Id");
          require(amt == msg.value, "invalid amt");
@@ -151,9 +152,10 @@ contract Payment is Initializable, Ownable {
 
          R.amount = amt;
          R.payer = msg.sender;
+         R.worth = worth;
          R.timestamp = block.timestamp;
     
-         emit Pay(R.payer, R.amount);
+         emit Pay(paymentId, R.payer, R.amount, R.worth);
     }
 
     function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public {
@@ -186,18 +188,7 @@ contract Payment is Initializable, Ownable {
         //refund
         R.refund = amt;
         payable(msg.sender).transfer(amt);
-        emit Refund(msg.sender, amt);
-    }
-
-    function check(string memory paymentId, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public view returns(address[] memory signs){
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 digest = getDigest(paymentId, amt, expir);
-        bytes32 hash = keccak256(abi.encodePacked(prefix, digest));
-
-        for (uint256 i = 0; i < vs.length; i++) {
-            address signAddr = ecrecover(hash, vs[i], rs[i*2], rs[i*2+1]);
-            signs[i] = signAddr;
-        }
+        emit Refund(paymentId, msg.sender, amt);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
