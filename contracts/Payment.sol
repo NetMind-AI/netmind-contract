@@ -165,7 +165,7 @@ contract Payment is Initializable, Ownable {
         require(R.amount > 0, "invalid paymentId");
         require(R.amount >= amt, "invalid amt");
         require(block.timestamp <= expir, "sign expired");
-        require(msg.sender == R.payer, "invalid sender");
+      
 
         //check sign
         uint256 counter;
@@ -187,8 +187,8 @@ contract Payment is Initializable, Ownable {
 
         //refund
         R.refund = amt;
-        payable(msg.sender).transfer(amt);
-        emit Refund(paymentId, msg.sender, amt);
+        payable(R.payer).transfer(amt);
+        emit Refund(paymentId, R.payer, amt);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
