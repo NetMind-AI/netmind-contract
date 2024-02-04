@@ -94,8 +94,9 @@ contract baseProxy is Proxy {
     }
     
     function changeAdmin(address newAdmin) external onlyAmdin returns(bool) {
+        address preAdmin =  admin();
         _setAdmin(newAdmin);
-        emit AdminChanged(admin(), newAdmin);
+        emit AdminChanged(preAdmin, newAdmin);
         return true;
     } 
     

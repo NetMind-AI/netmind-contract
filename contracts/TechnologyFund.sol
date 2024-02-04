@@ -123,6 +123,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
     event DeleteNodeAddr(address _nodeAddr);
     event Propose(address indexed proposer, uint256 proposalId, address targetAddr, uint256 amount,string content);
     event Vote(address indexed voter, uint256 proposalId);
+    event UpdateVotingPeriod(uint256 _votingPeriod);
 
     struct ProposalMsg {
         address proposalSponsor;
@@ -173,7 +174,9 @@ contract TechnologyFund is ITechnologyFund,Ownable{
     }
    
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
+        require(_votingPeriod <= 15 days && _votingPeriod > votingPeriod, "Parameter error");
         votingPeriod = _votingPeriod;
+        emit UpdateVotingPeriod(_votingPeriod);
     }
 
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
@@ -183,7 +186,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
     function _addNodeAddr(address[] calldata _nodeAddrs) internal {
         for (uint256 i = 0; i< _nodeAddrs.length; i++){
             address _nodeAddr = _nodeAddrs[i];
-            require(!nodeAddrSta[_nodeAddr], "This node is already a pledged node");
+            require(!nodeAddrSta[_nodeAddr], "This node is already a node");
             nodeAddrSta[_nodeAddr] = true;
             uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
             if (_nodeAddrIndex == 0){
@@ -202,7 +205,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
     function deleteNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         for (uint256 i = 0; i< _nodeAddrs.length; i++){
             address _nodeAddr = _nodeAddrs[i];
-            require(nodeAddrSta[_nodeAddr], "This node is not a pledge node");
+            require(nodeAddrSta[_nodeAddr], "This node is not a node");
             nodeAddrSta[_nodeAddr] = false;
             uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
             if (_nodeAddrIndex > 0){
@@ -247,17 +250,18 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         uint256 _time = block.timestamp;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
+        require(!_proposalMsg.proposalSta, "The proposal has already been executed");
         require(_proposalMsg.expire > _time, "The vote on the proposal has expired");
         require(!_proposalMsg.voterSta[_sender], "The proposer has already voted");
-        _verify(_proposalMsg.amount);
-        withdrawSum = withdrawSum + _proposalMsg.amount;
         _proposalMsg.allProposers.push(_sender);
         _proposalMsg.voterSta[_sender] = true;
         uint256 length = _proposalMsg.allProposers.length;
         if(length> nodeNum/2 && !_proposalMsg.proposalSta){
+            _verify(_proposalMsg.amount);
             require(address(this).balance >= _proposalMsg.amount, "Insufficient balance");
             payable(_proposalMsg.targetAddr).transfer(_proposalMsg.amount);
             _proposalMsg.proposalSta = true;
+            withdrawSum = withdrawSum + _proposalMsg.amount;
         }
         emit Vote(_sender, _proposalId);
     }

@@ -52,12 +52,12 @@ contract Snapshoot is Initializable, ISnapshoot{
     mapping(uint256 => SnapshootMsg)  snapshootIndex;
     mapping(uint256 => mapping(uint256 => uint256)) snapshootMsg;
 
-    event UpdateSnapshoot(uint256 _type, uint256 _day, string dataHash, string dataId); 
-    event UpdateSnapshootFail(uint256 _type, uint256 _day, string dataHash, string dataId); 
+    event UpdateSnapshoot(uint256 _type, uint256 _day, string dataId, string dataHash); 
+    event UpdateSnapshootFail(uint256 _type, uint256 _day, string dataId, string dataHash); 
  
     struct DataMsg{
-        string dataId;
         string dataHash;
+        string dataId;
     }
 
     struct SnapshootMsg{
@@ -154,13 +154,13 @@ contract Snapshoot is Initializable, ISnapshoot{
         if(_snapshootMsg.dataVotes[_dataFlag] >= 2){
             _snapshootMsg.consensusSta = 1;
             _snapshootMsg.time = block.timestamp;
-            emit UpdateSnapshoot(_type, _day, _dataMsg.dataHash, _dataMsg.dataId);
+            emit UpdateSnapshoot(_type, _day, _dataMsg.dataId, _dataMsg.dataHash);
         }else if(_snapshootMsg.nodeVoteNum > 2){
             _snapshootMsg.consensusSta = 2;
             _snapshootMsg.time = block.timestamp;
             uint256 _snapshootNum = ++snapshootNum;
             snapshootMsg[_type][_day] = _snapshootNum;
-            emit UpdateSnapshootFail(_type, _day, _dataMsg.dataHash, _dataMsg.dataId);
+            emit UpdateSnapshootFail(_type, _day, _dataMsg.dataId, _dataMsg.dataHash);
         }
     }
 
@@ -207,8 +207,8 @@ contract Snapshoot is Initializable, ISnapshoot{
             _snapshootMsg.nodeVoteNum, 
             _snapshootMsg.voteAddrList, 
             _snapshootMsg.voteTimeList, 
-            _dataMsg.dataHash, 
             _dataMsg.dataId,
+            _dataMsg.dataHash, 
             _dataVotes
         );
     }
@@ -240,8 +240,8 @@ contract Snapshoot is Initializable, ISnapshoot{
             _snapshootMsg.nodeVoteNum, 
             _snapshootMsg.voteAddrList, 
             _snapshootMsg.voteTimeList, 
-            _dataMsg.dataHash, 
             _dataMsg.dataId,
+            _dataMsg.dataHash, 
             _dataVotes
         );
     }

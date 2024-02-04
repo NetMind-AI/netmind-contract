@@ -107,37 +107,8 @@ contract Ownable is Initializable{
     }
 }
 
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-}
 
 contract AccountManage is Ownable{
-    using SafeMath for uint256;
     address public conf;
     uint256 public burnAmount;
     uint256 public num;
@@ -150,6 +121,7 @@ contract AccountManage is Ownable{
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => uint256)) public withdrawData;
     uint256 public signNum;
+    bool private reentrancyLock;
     
     event WithdrawToken(address indexed _userAddr, uint256 _nonce, uint256 _amount);
     event UpdateAuthSta(address _addr, bool sta);
@@ -179,6 +151,12 @@ contract AccountManage is Ownable{
         bytes32 s;
     }
 
+    modifier nonReentrant() {
+        require(!reentrancyLock);
+        reentrancyLock = true;
+        _;
+        reentrancyLock = false;
+    }
 
     modifier onlyExecutor() {
         require(IConf(conf).accountManageExecutor() == msg.sender, "caller is not the accountManageExecutor");
@@ -253,17 +231,18 @@ contract AccountManage is Ownable{
         uint256 _num = userAccountByAddr[sender];
         require(_num > 0, "The user id does not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        _userAccountMsg.balance = _userAccountMsg.balance.add(msg.value);
+        _userAccountMsg.balance = _userAccountMsg.balance + msg.value;
         emit TokenCharge(_userAccountMsg.userId, msg.value, sender);
     }
 
-    function withdraw(uint256 value) external{
+    function withdraw(uint256 value) external nonReentrant(){
         address sender = msg.sender;
         uint256 _num = userAccountByAddr[sender];
         require(_num > 0, "The user id does not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(address(this).balance >= value, "Insufficient balance");
-        _userAccountMsg.balance = _userAccountMsg.balance.sub(value);
+        _userAccountMsg.balance = _userAccountMsg.balance - value;
+        require(sender != address(0), "The address is 0");
         payable(sender).transfer(value);
         emit Withdraw(sender, _userAccountMsg.userId, value);
     }
@@ -272,8 +251,8 @@ contract AccountManage is Ownable{
         uint256 _num = userAccountById[_userId];
         require(_num > 0, "The user id does not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        _userAccountMsg.balance = _userAccountMsg.balance.sub(freezeValue);
-        _userAccountMsg.freezed = _userAccountMsg.freezed.add(freezeValue);
+        _userAccountMsg.balance = _userAccountMsg.balance - freezeValue;
+        _userAccountMsg.freezed = _userAccountMsg.freezed + freezeValue;
         emit Freeze(_userId, freezeValue, _userAccountMsg.balance, jobType);
         return true;
     }
@@ -282,19 +261,19 @@ contract AccountManage is Ownable{
         uint256 _num = userAccountById[_userId];
         require(_num > 0, "The user id does not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        _userAccountMsg.freezed = _userAccountMsg.freezed.sub(useValue).sub(offsetValue);
-        _userAccountMsg.balance = _userAccountMsg.balance.add(offsetValue);
+        _userAccountMsg.freezed = _userAccountMsg.freezed - useValue - offsetValue;
+        _userAccountMsg.balance = _userAccountMsg.balance + offsetValue;
         uint256 _settlement;
         if(jobType == 1){
             _settlement = IConf(conf).p_settlement();
         }else if(jobType == 2){
             _settlement = IConf(conf).v_settlement();
         }
-        uint256 fee = _settlement.mul(useValue).div(10000) ;
-        providerFeeSum = providerFeeSum.add(fee);
-        fee = useValue.sub(fee);
+        uint256 fee = _settlement * useValue / 10000 ;
+        providerFeeSum = providerFeeSum + fee;
+        fee = useValue - fee;
         payable(address(0x00)).transfer(fee);
-        burnAmount = burnAmount.add(fee);
+        burnAmount = burnAmount + fee;
         emit ExecDebit(_userId, useValue, offsetValue, _userAccountMsg.balance, jobType);
         return true;
     }
@@ -306,8 +285,8 @@ contract AccountManage is Ownable{
         bytes32[] calldata rssMetadata
     )
         external
+        nonReentrant()
     {   
-        require(addr.code.length == 0, "The caller is the contract");
         require(providerFeeSum >= uints[0], "Withdrawal quantity exceeds available quantity");
         require( block.timestamp<= uints[1], "The transaction exceeded the time limit");
         uint256 len = vs.length;
@@ -334,7 +313,7 @@ contract AccountManage is Ownable{
         require(areElementsUnique(signAddrs), "Signature parameter not unique");
         withdrawData[addr][_nonce] =  uints[0];
         payable(addr).transfer(uints[0]);
-        providerFeeSum = providerFeeSum.sub(uints[0]);
+        providerFeeSum = providerFeeSum - uints[0];
         emit WithdrawToken(addr, _nonce, uints[0]);
     }
     
@@ -364,6 +343,8 @@ contract AccountManage is Ownable{
     }
      
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);

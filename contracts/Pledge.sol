@@ -129,7 +129,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     uint256 public  chainsNum;                           
     mapping(string => uint256) public chainsIndex;  
     mapping(uint256 => string) public indexChains;  
-    mapping(string => mapping(address => uint256)) public nodeChainLucaAmount; 
+    mapping(string => mapping(address => uint256)) public nodeChainAmount; 
     event UpadeNodesMapping(address nodeId, address oldAddr, address newAddr);
     event UpadeNodesWallet(address nodeId, address walAddr);
     event AddNodeAddr(address _nodeAddr);
@@ -139,7 +139,6 @@ contract Pledge is Initializable,Ownable,IPledge{
     event UpdateTokenSta(address _token, bool _sta);
     event UpdateGuarder(address guarder);
     event DeleteChain(string chain);
-    event UpadeNodesStake(string chain, address[] addrs, uint256[] uints);
     event UpadeNodesStake(address nodeAddr, uint256 amount, string chain);
 
     struct StakeTokenMsg {
@@ -207,13 +206,14 @@ contract Pledge is Initializable,Ownable,IPledge{
             require(nodeAddrSta[_nodeId],"not node addr");
             if(_newAddr!=address(0)){
                 _oldAddr = getNodeAddrById(_nodeId);
-                require(!nodeAddrSta[_newAddr] && nodeIdByAddr[_newAddr] == address(0) && nodeAddrById[_newAddr] == address(0) , "node exist");
+                require(!nodeAddrSta[_newAddr] && nodeIdByAddr[_newAddr] == address(0), "newAddr is already occupied");
                 nodeIdByAddr[_newAddr] = _nodeId;
                 nodeAddrById[_nodeId] = _newAddr;
+                nodeIdByAddr[_oldAddr] = address(0);
                 emit UpadeNodesMapping(_nodeId, _oldAddr, _newAddr);
             }
             if(_walAddr!=address(0)){
-                require(!nodeAddrSta[_walAddr] && nodeIdByAddr[_walAddr] == address(0) && nodeAddrById[_walAddr] == address(0) , "walAddr exist");
+                require(!nodeAddrSta[_walAddr] && nodeIdByAddr[_walAddr] == address(0), "walAddr is already occupied");
                 walletById[_nodeId] = _walAddr;
                 emit UpadeNodesWallet(_nodeId, _walAddr);
             }
@@ -274,14 +274,7 @@ contract Pledge is Initializable,Ownable,IPledge{
             require(IERC20(_token).transferFrom(_sender,address(this),_amount), "Token transfer failed");
         }
         require(_amount > 0, "The pledge amount cannot be less than the minimum value");
-        uint256 _nodeNum = nodeNum;
         uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
-        if (_nodeAddrIndex == 0){
-            _nodeAddrIndex = ++nodeNum;
-            _nodeNum = _nodeAddrIndex;
-            nodeAddrIndex[_nodeAddr] = _nodeAddrIndex;
-            nodeIndexAddr[_nodeAddrIndex] = _nodeAddr;
-        }
         uint256 _stakeTokenNum = ++stakeTokenNum;
         uint256 _userStakeTokenNum = ++userStakeTokenNum[_sender];
         userStakeTokenIndex[_sender][_userStakeTokenNum] = _stakeTokenNum;
@@ -357,7 +350,6 @@ contract Pledge is Initializable,Ownable,IPledge{
         require( block.timestamp<= expiredTime, "The transaction exceeded the time limit");
         updateChainList(chain, addrs, uints);
         updateStake(chain, addrs, uints);
-        emit UpadeNodesStake(chain, addrs, uints);
     }
         
     function queryChainStake(string calldata chain) external view returns (address[] memory, uint256[] memory){
@@ -370,7 +362,7 @@ contract Pledge is Initializable,Ownable,IPledge{
             for (uint256 i=1; i <= nodeNum; i++){
                 address _nodeAddr = nodeIndexAddr[i];
                 _addrArray[j] = _nodeAddr;
-                _stakeAmount[j] = nodeChainLucaAmount[chain][_nodeAddr];
+                _stakeAmount[j] = nodeChainAmount[chain][_nodeAddr];
                 j++;
             }
         }
@@ -497,7 +489,7 @@ contract Pledge is Initializable,Ownable,IPledge{
 
     function getNodeIdByAddr(address _nodeAddr) public view returns(address){
         address _nodeId = nodeIdByAddr[_nodeAddr];
-        if(_nodeId == address(0) && nodeAddrSta[_nodeAddr] && nodeAddrById[_nodeAddr] == _nodeId){
+        if(_nodeId == address(0) && nodeAddrSta[_nodeAddr]){
             return _nodeAddr;
         }else {
             return _nodeId;
@@ -521,14 +513,14 @@ contract Pledge is Initializable,Ownable,IPledge{
     function updateStake(string memory chain, address[] memory addrs, uint256[] memory uints) internal {
         for (uint256 i = 0; i < addrs.length; i++) {
            address _nodeAddr = addrs[i];
-           uint256 _nodeChainLucaAmount = nodeChainLucaAmount[chain][_nodeAddr];
+           uint256 _nodeChainAmount = nodeChainAmount[chain][_nodeAddr];
            uint256 _nodeStakeAmount = nodeStakeAmount[_nodeAddr];
-           nodeStakeAmount[_nodeAddr] = _nodeStakeAmount - _nodeChainLucaAmount + uints[i];
-           nodeChainLucaAmount[chain][_nodeAddr] = uints[i];
-           if(_nodeChainLucaAmount > uints[i]){
+           nodeStakeAmount[_nodeAddr] = _nodeStakeAmount - _nodeChainAmount + uints[i];
+           nodeChainAmount[chain][_nodeAddr] = uints[i];
+           if(_nodeChainAmount > uints[i]){
                cancelNodeStake(_nodeAddr);
                emit UpadeNodesStake(_nodeAddr, uints[i], chain);
-           }else if(_nodeChainLucaAmount < uints[i]){
+           }else if(_nodeChainAmount < uints[i]){
                uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
                addNodeStake(_nodeAddrIndex);
                emit UpadeNodesStake(_nodeAddr, uints[i], chain);
