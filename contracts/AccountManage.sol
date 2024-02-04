@@ -179,10 +179,7 @@ contract AccountManage is Ownable{
       initializer
     {
        conf = _conf;
-       uint chainId;
-        assembly {
-            chainId := chainId
-        }
+       uint chainId = block.chainid;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),

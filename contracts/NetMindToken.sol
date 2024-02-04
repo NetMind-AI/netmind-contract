@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract NetMindToken is Initializable, ERC20Upgradeable, AccessControlUpgradeable, ERC20PermitUpgradeable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    address public addr;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -25,9 +25,5 @@ contract NetMindToken is Initializable, ERC20Upgradeable, AccessControlUpgradeab
 
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(to, amount);
-    }
-
-    function set(address to) public {
-        addr = to;
     }
 }

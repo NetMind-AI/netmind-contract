@@ -182,10 +182,7 @@ contract Crosschain  is Initializable,Ownable {
 
     function __Crosschain_init_unchained(bool _sta) internal initializer{
         mainChainSta = _sta;
-        uint chainId;
-        assembly {
-            chainId := chainId
-        }
+        uint chainId = block.chainid;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
