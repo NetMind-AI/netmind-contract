@@ -127,14 +127,28 @@ contract Payment is Initializable, Ownable {
     event Pay(string id, address payer, uint256 amount, uint256 worth);
     event Refund(string id, address payer, uint256 amount);
 
-    function init(address _conf, uint256 _signum) public initializer{
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
+    function init(address _conf, uint256 _signum, uint256 chainId) public initializer{
+        require(_conf != address(0), "zero address");
+        require(_signum > 0, "zero signum");
+        require(chainId > 0, "zero chainId");
         conf = _conf;
         SigNum = _signum;
 
         __Ownable_init_unchained();
 
-        uint chainId;
-        assembly {chainId := chainId}
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
@@ -144,11 +158,10 @@ contract Payment is Initializable, Ownable {
         );
     }
 
-    function payment(string memory paymentId, uint256 amt, uint256 worth) public payable{
+    function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
          require(R.amount <= 0, "invalid payment Id");
          require(amt == msg.value, "invalid amt");
-         require(msg.sender.code.length == 0, "invalid caller");
 
          R.amount = amt;
          R.payer = msg.sender;
@@ -158,7 +171,7 @@ contract Payment is Initializable, Ownable {
          emit Pay(paymentId, R.payer, R.amount, R.worth);
     }
 
-    function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public {
+    function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
         require(R.refund <= 0, "already refund");
@@ -203,6 +216,8 @@ contract Payment is Initializable, Ownable {
     }
 
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);

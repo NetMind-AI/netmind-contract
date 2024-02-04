@@ -99,6 +99,7 @@ contract Ownable is Initializable{
 }
 
 interface IERC20 {
+    function balanceOf(address user) external returns(uint256);
     function transfer(address to, uint256 amt) external returns(bool);
     function transferFrom(address from, address to, uint256 amt) external returns(bool);
 }
@@ -204,6 +205,8 @@ contract FixedLock is Initializable, Ownable {
 
         //claim reward
         uint256 reward = lf.amount * rewardPropotion / 1000;
+        uint256 balance = IERC20(nmt).balanceOf(address(this));
+        require(balance - reward >= totalLocked, "reward used up");
         IERC20(nmt).transfer(lf.owner, reward);
         emit Claim(id, msg.sender, reward);
 

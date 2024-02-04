@@ -133,14 +133,17 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         _;
     }
     function setBlacker(address guy) public onlyOwner{
+        require(guy != address(0), "zero address");
         blacker = guy;
     }
     
     function addBlacklist(address guy) public onlyBlocker {
+        require(guy != address(0), "zero address");
         blacklist[guy] = true;
     }
 
     function removeBlacklist(address guy) public onlyOwner{
+        require(guy != address(0), "zero address");
         blacklist[guy] = false;
     }
 
@@ -169,18 +172,26 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         _;
     }
 
-    function init(address _conf) external initializer{
-        __Ownable_init_unchained();
-        __Reward_init_unchained(_conf);
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
     }
-    
-    function __Reward_init_unchained(address _conf) internal initializer{
-        require(_conf != address(0), "conf address cannot be 0");
-        conf = IConf(_conf);
-        uint chainId;
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
         assembly {
-            chainId := chainId
+            size := extcodesize(addr)
         }
+        return size > 0;
+    }
+
+    function init(address _conf, uint256 chainId) external initializer{
+        require(_conf != address(0), "conf address cannot be 0");
+        require(chainId > 0, "chainId cannot be zero");
+
+        __Ownable_init_unchained();
+        
+        conf = IConf(_conf);
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
@@ -188,10 +199,6 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
                 address(this)
             )
         );
-    }
-
-    receive() payable external{
-
     }
 
     function updateExector(address _exector) external onlyOwner{
@@ -216,17 +223,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         pause = true;
     }
 
-    function withdrawToken(
-        address[2] calldata addrs,
-        uint256[2] calldata uints,
-        uint8[] calldata vs,
-        bytes32[] calldata rssMetadata
-    )
-        override
-        external
-        onlyGuard
-    {   
-        require(addrs[0].code.length == 0, "RewardContract: The caller is the contract");
+    function withdrawToken(address[2] calldata addrs,uint256[2] calldata uints, uint8[] calldata vs, bytes32[] calldata rssMetadata) override external notContract onlyGuard{   
         require(addrs[0] == msg.sender && !blacklist[msg.sender], "RewardContract: access denied");
         require( block.timestamp<= uints[1], "RewardContract: The transaction exceeded the time limit");
         uint256 len = vs.length;
@@ -267,6 +264,8 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     }
     
     function verifySign(bytes32 _digest,Sig memory _sig) internal returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _accessAccount = ecrecover(hash, _sig.v, _sig.r, _sig.s);
