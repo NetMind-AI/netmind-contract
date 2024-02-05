@@ -140,15 +140,15 @@ contract Payment is Initializable, Ownable {
         return size > 0;
     }
 
-    function init(address _conf, uint256 _signum, uint256 chainId) public initializer{
+    function init(address _conf, uint256 _signum) public initializer{
         require(_conf != address(0), "zero address");
         require(_signum > 0, "zero signum");
-        require(chainId > 0, "zero chainId");
+       
         conf = _conf;
         SigNum = _signum;
-
         __Ownable_init_unchained();
 
+        uint chainId = block.chainid;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
