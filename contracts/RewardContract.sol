@@ -185,13 +185,13 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         return size > 0;
     }
 
-    function init(address _conf, uint256 chainId) external initializer{
+    function init(address _conf) external initializer{
         require(_conf != address(0), "conf address cannot be 0");
-        require(chainId > 0, "chainId cannot be zero");
-
+        conf = IConf(_conf);
+        
         __Ownable_init_unchained();
         
-        conf = IConf(_conf);
+        uint chainId = block.chainid;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),

@@ -136,7 +136,7 @@ contract RewardPool is Initializable, Ownable {
         DailyMaxMove = amt;
     }
 
-    function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable, uint256 chainId) public initializer{
+    function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable) public initializer{
         require(_conf != address(0), "_conf is zero address");
         require(_reward != address(0), "_reward is zero address");
 
@@ -148,6 +148,7 @@ contract RewardPool is Initializable, Ownable {
 
         __Ownable_init_unchained();
 
+        uint chainId = block.chainid;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
