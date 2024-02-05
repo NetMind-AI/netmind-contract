@@ -185,7 +185,7 @@ contract TrainingTask is Ownable{
         upateOrderIdSta[orderId] = true;
         JobMsg storage _jobMsg = jobMsg[_num];
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1 , "task status error");
         (uint256 userBalance,,) = accountManage.queryUserMsgById(userId);
         require(userBalance >= freezeAmount, "Insufficient balance");
         require(accountManage.freeze(userId, freezeAmount, _jobMsg.jobType), "Failed to freeze user amount");
@@ -200,7 +200,7 @@ contract TrainingTask is Ownable{
         require(!execOrderIdSta[orderId], "The order number has already been used");
         execOrderIdSta[orderId] = true;
         JobMsg storage _jobMsg = jobMsg[_num];
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1, "task status error");
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
         require(_jobMsg.freezeAmount >= usageAmount, "The frozen quantity is not enough to be deducted");
         _jobMsg.usageAmount = _jobMsg.usageAmount + usageAmount;
@@ -213,7 +213,7 @@ contract TrainingTask is Ownable{
         uint256 _num = userJobMsg[jobId];
         require( _num > 0, "JobId does not exist");
         JobMsg storage _jobMsg = jobMsg[_num];
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1, "task status error");
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
         require(_jobMsg.freezeAmount >= usageAmount, "The frozen quantity is not enough to be deducted");
         _jobMsg.usageAmount = _jobMsg.usageAmount + usageAmount;
