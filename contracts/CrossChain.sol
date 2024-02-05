@@ -4,7 +4,7 @@ pragma solidity ^0.8.0 ;
 interface IERC20 {
     function transfer(address _to, uint256 _value) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
-    function mint(address to, uint256 value) external returns (bool);
+    function mint(address to, uint256 amount) external;
     function burn(uint256 amount) external returns (bool);
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
 }
@@ -414,7 +414,7 @@ contract Crosschain  is Initializable,Ownable {
             if(tokenSta[addrs[1]] == 1){
                 require(token.transfer(addrs[0], uints[0]), "Token transfer failed");
             }else{
-                require(token.mint(addrs[0], uints[0]), "Token transfer failed");
+                token.mint(addrs[0], uints[0]);
             }
             
         }
