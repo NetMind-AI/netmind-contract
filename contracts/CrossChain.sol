@@ -167,6 +167,19 @@ contract Crosschain  is Initializable,Ownable {
         reentrancyLock = false;
     }
 
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
     modifier onlyGuard() {
         require(!pause, "Crosschain: The system is suspended");
         _;
@@ -336,6 +349,7 @@ contract Crosschain  is Initializable,Ownable {
         external
         onlyGuard
         nonReentrant()
+        notContract()
     {
         require( trader == msg.sender, "Crosschain: The trader error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");

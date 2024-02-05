@@ -151,6 +151,19 @@ contract AccountManage is Ownable{
         bytes32 s;
     }
 
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
     modifier nonReentrant() {
         require(!reentrancyLock);
         reentrancyLock = true;
@@ -283,6 +296,7 @@ contract AccountManage is Ownable{
     )
         external
         nonReentrant()
+        notContract()
     {   
         require(providerFeeSum >= uints[0], "Withdrawal quantity exceeds available quantity");
         require( block.timestamp<= uints[1], "The transaction exceeded the time limit");
