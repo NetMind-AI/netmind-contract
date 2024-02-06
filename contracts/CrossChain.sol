@@ -5,7 +5,7 @@ interface IERC20 {
     function transfer(address _to, uint256 _value) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
     function mint(address to, uint256 value) external returns (bool);
-    function burn(uint256 amount) external returns (bool);
+    function burn(uint256 amount) external;
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
 }
 
@@ -114,7 +114,7 @@ contract Crosschain  is Initializable,Ownable {
     bool public pause;
     uint256 public nodeNum;
     uint256 public stakeNum;
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     bool public mainChainSta;
     mapping(string => mapping(address => uint256)) public chargeRate;
     mapping(address => uint256) public tokenSta;
@@ -201,14 +201,7 @@ contract Crosschain  is Initializable,Ownable {
 
     function __Crosschain_init_unchained(bool _sta) internal initializer{
         mainChainSta = _sta;
-        uint chainId = block.chainid;
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+         CONTRACT_DOMAIN = keccak256('Netmind Crosschain V1.0');
     }
 
     receive() payable external{
@@ -340,7 +333,7 @@ contract Crosschain  is Initializable,Ownable {
         feeAmount[tokenAddr] = feeAmount[tokenAddr] + _fee;
         stakeMsg[++stakeNum] = Stake(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
         if(!mainChainSta && _sta == 2){
-            require(token.burn(_amount), "Token burn failed");
+            token.burn(_amount);
         }
         emit StakeToken(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
     }
@@ -410,6 +403,16 @@ contract Crosschain  is Initializable,Ownable {
         return (_addrArray);
     }
     
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
     function _transferToken(address[2] memory addrs, uint256[2] memory uints, string[] memory strs) internal {
         if(mainChainSta){
             require(address(this).balance >= uints[0], "Insufficient amount of balance");
@@ -458,7 +461,7 @@ contract Crosschain  is Initializable,Ownable {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(_data.userAddr, _data.contractAddr,  _data.amount, _data.expiration, _data.chain, _data.txid))
             )
         );

@@ -121,7 +121,7 @@ contract AccountManage is Ownable{
     mapping(address => uint256) public userAccountByAddr;
     mapping(address => bool) public authSta;
     uint256 public providerFeeSum;
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => uint256)) public withdrawData;
     uint256 public signNum;
@@ -198,14 +198,7 @@ contract AccountManage is Ownable{
       initializer
     {
        conf = _conf;
-       uint chainId = block.chainid;
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+       CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
     }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
@@ -348,6 +341,16 @@ contract AccountManage is Ownable{
         return (_userAccountMsg.balance, _userAccountMsg.freezed, _userAccountMsg.userId);
     }
 
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
         for(uint i = 0; i < arr.length - 1; i++) {
             for(uint j = i + 1; j < arr.length; j++) {
@@ -376,7 +379,7 @@ contract AccountManage is Ownable{
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(_data.userAddr, _data.amount, _data.expiration, _nonce))
             )
         );
