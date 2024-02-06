@@ -414,7 +414,7 @@ contract Crosschain  is Initializable,Ownable {
     }
 
     function _transferToken(address[2] memory addrs, uint256[2] memory uints, string[] memory strs) internal {
-        if(mainChainSta){
+        if(addrs[1] == address(0)){
             require(address(this).balance >= uints[0], "Insufficient amount of balance");
             payable(addrs[0]).transfer(uints[0]);
         }else {
