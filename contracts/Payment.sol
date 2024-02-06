@@ -154,7 +154,6 @@ contract Payment is Initializable, Ownable {
         SigNum = _signum;
         __Ownable_init_unchained();
 
-        uint chainId = block.chainid;
         CONTRACT_DOMAIN = keccak256('Netmind Payment V1.0');
     }
 
