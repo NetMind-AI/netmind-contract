@@ -109,7 +109,7 @@ interface IConf {
 
 
 contract Payment is Initializable, Ownable {
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     address public conf;
     uint256 public SigNum;
     mapping(string=>recipt) public recipts;
@@ -155,13 +155,7 @@ contract Payment is Initializable, Ownable {
         __Ownable_init_unchained();
 
         uint chainId = block.chainid;
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+        CONTRACT_DOMAIN = keccak256('Netmind Payment V1.0');
     }
 
     function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
@@ -235,8 +229,18 @@ contract Payment is Initializable, Ownable {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(paymentId, amt, expir)))
+        );
+    }
+
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
         );
     }
 }
