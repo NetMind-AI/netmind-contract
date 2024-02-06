@@ -38,6 +38,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -152,6 +156,9 @@ contract CommunityFund is ICommunityFund,Ownable{
         _;
         reentrancyLock = false;
     }
+
+    constructor(){_disableInitializers();}
+
 
     function init(address[] calldata _nodeAddrs) external initializer{
         __Ownable_init_unchained();

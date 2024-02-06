@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -131,6 +135,8 @@ contract FixedLock is Initializable, Ownable {
     event Unlock(uint256 indexed id, address indexed owner, uint256 amt);
     event Claim(uint256 indexed id, address indexed owner, uint256 amt);
 
+    constructor(){_disableInitializers();}
+    
     function init(address _nmt, uint256 _strat, uint256 _end, uint256 _lockDuration, uint256 _rewardPropotion, uint256 _rewardDelay) public initializer{
         nmt = _nmt;
         startTime = _strat;

@@ -43,6 +43,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Snapshoot is Initializable, ISnapshoot{
@@ -73,6 +77,8 @@ contract Snapshoot is Initializable, ISnapshoot{
         uint256  consensusSta;
         uint256  time;      
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf) external initializer{
         conf = Iconf(_conf);

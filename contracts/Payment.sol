@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -139,6 +143,8 @@ contract Payment is Initializable, Ownable {
         }
         return size > 0;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf, uint256 _signum) public initializer{
         require(_conf != address(0), "zero address");

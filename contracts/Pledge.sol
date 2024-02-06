@@ -42,6 +42,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -166,6 +170,8 @@ contract Pledge is Initializable,Ownable,IPledge{
         require(msg.sender == guarder, "caller is not the guarder");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init() external initializer{
         __Ownable_init_unchained();

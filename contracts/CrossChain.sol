@@ -38,6 +38,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -184,6 +188,8 @@ contract Crosschain  is Initializable,Ownable {
         require(!pause, "Crosschain: The system is suspended");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(
         address _management,

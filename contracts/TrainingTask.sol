@@ -40,6 +40,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -142,6 +146,8 @@ contract TrainingTask is Ownable{
         require(msg.sender == IConf(conf).trainingTaskExecutor(), "caller is not the trainingTaskExecutor");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(
         address _conf,

@@ -39,6 +39,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -180,6 +184,8 @@ contract AccountManage is Ownable{
         require(authSta[msg.sender], "The caller does not have permission");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf)  external 
        initializer

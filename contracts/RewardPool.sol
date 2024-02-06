@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -135,6 +139,8 @@ contract RewardPool is Initializable, Ownable {
     function setDailyMaxMove(uint256 amt) public onlyOwner{
         DailyMaxMove = amt;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable) public initializer{
         require(_conf != address(0), "_conf is zero address");

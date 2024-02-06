@@ -10,6 +10,10 @@ contract Initialize {
         _;
         initialized = true;
     }
+
+    function _disableInitializers() internal {
+        initialized = true;
+    }
 }
 
 contract Conf is Initialize {
@@ -58,6 +62,8 @@ contract Conf is Initialize {
     //new reward opition, that will reset the reward proportion. new reward proportion: staking => 50%, liquidity => 30%, node => 20%
     uint256 public liquidity_awd; //Award of liquidity proportion => 30% [THD]
 
+    constructor(){_disableInitializers();}
+    
     function initialize() external init {
         begin = block.timestamp;
         award = 10**28;

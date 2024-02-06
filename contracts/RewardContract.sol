@@ -47,6 +47,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -184,6 +188,8 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         }
         return size > 0;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf) external initializer{
         require(_conf != address(0), "conf address cannot be 0");
