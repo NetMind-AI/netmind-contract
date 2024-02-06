@@ -121,7 +121,7 @@ contract Ownable is Initializable{
 
 contract RewardContract is Initializable,Ownable,IRewardContract {
     IConf public conf;
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     bool public pause;
     mapping(address => uint256) public nonce;
     mapping(address => mapping(uint256 => WithdrawData)) public withdrawData;
@@ -197,14 +197,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         
         __Ownable_init_unchained();
         
-        uint chainId = block.chainid;
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+        CONTRACT_DOMAIN = keccak256('Netmind RewardContract V1.0');
     }
 
     function updateExector(address _exector) external onlyOwner{
@@ -300,10 +293,20 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(_data.userAddr, _data.contractAddr,  _data.amount, _data.expiration, _nonce))
             )
         );
     }
+
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
+        );
+    }    
 }
 
