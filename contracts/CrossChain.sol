@@ -318,9 +318,8 @@ contract Crosschain  is Initializable,Ownable {
         require( chainSta[_chain], "Crosschain: The chain does not support transfer");
         uint256 _sta = tokenSta[tokenAddr];
         IERC20 token = IERC20(tokenAddr);
-        if(mainChainSta){
+        if(tokenAddr == address(0)){
             _amount = msg.value;
-            require(tokenAddr == address(0), "tokenAddr error");
         }else {
             require(msg.value == 0, "Value must be equal to 0");
             require(_sta > 0, "Incorrect token state setting");
@@ -332,7 +331,7 @@ contract Crosschain  is Initializable,Ownable {
         _amount = _amount - _fee;
         feeAmount[tokenAddr] = feeAmount[tokenAddr] + _fee;
         stakeMsg[++stakeNum] = Stake(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
-        if(!mainChainSta && _sta == 2){
+        if(_sta == 2){
             token.burn(_amount);
         }
         emit StakeToken(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
