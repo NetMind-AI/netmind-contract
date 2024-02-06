@@ -25,7 +25,8 @@ contract NetMindToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeab
         _grantRole(MINTER_ROLE, minter);
     }
 
-    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) returns (bool) {
         _mint(to, amount);
+        return true;
     }
 }
