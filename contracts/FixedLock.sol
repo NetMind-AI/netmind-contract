@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -99,6 +103,7 @@ contract Ownable is Initializable{
 }
 
 interface IERC20 {
+    function balanceOf(address user) external returns(uint256);
     function transfer(address to, uint256 amt) external returns(bool);
     function transferFrom(address from, address to, uint256 amt) external returns(bool);
 }
@@ -130,6 +135,8 @@ contract FixedLock is Initializable, Ownable {
     event Unlock(uint256 indexed id, address indexed owner, uint256 amt);
     event Claim(uint256 indexed id, address indexed owner, uint256 amt);
 
+    constructor(){_disableInitializers();}
+    
     function init(address _nmt, uint256 _strat, uint256 _end, uint256 _lockDuration, uint256 _rewardPropotion, uint256 _rewardDelay) public initializer{
         nmt = _nmt;
         startTime = _strat;
@@ -204,6 +211,8 @@ contract FixedLock is Initializable, Ownable {
 
         //claim reward
         uint256 reward = lf.amount * rewardPropotion / 1000;
+        uint256 balance = IERC20(nmt).balanceOf(address(this));
+        require(balance - reward >= totalLocked, "reward used up");
         IERC20(nmt).transfer(lf.owner, reward);
         emit Claim(id, msg.sender, reward);
 

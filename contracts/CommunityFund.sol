@@ -38,6 +38,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -153,6 +157,9 @@ contract CommunityFund is ICommunityFund,Ownable{
         reentrancyLock = false;
     }
 
+    constructor(){_disableInitializers();}
+
+
     function init(address[] calldata _nodeAddrs) external initializer{
         __Ownable_init_unchained();
         __CommunityFund_init_unchained(_nodeAddrs);
@@ -174,6 +181,7 @@ contract CommunityFund is ICommunityFund,Ownable{
     }
    
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
+        require(_votingPeriod <= 15 days && _votingPeriod > votingPeriod, "Parameter error");
         votingPeriod = _votingPeriod;
         emit UpdateVotingPeriod(_votingPeriod);
     }
@@ -185,7 +193,7 @@ contract CommunityFund is ICommunityFund,Ownable{
     function _addNodeAddr(address[] calldata _nodeAddrs) internal {
         for (uint256 i = 0; i< _nodeAddrs.length; i++){
             address _nodeAddr = _nodeAddrs[i];
-            require(!nodeAddrSta[_nodeAddr], "This node is already a pledged node");
+            require(!nodeAddrSta[_nodeAddr], "This node is already a node");
             nodeAddrSta[_nodeAddr] = true;
             uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
             if (_nodeAddrIndex == 0){
@@ -204,7 +212,7 @@ contract CommunityFund is ICommunityFund,Ownable{
     function deleteNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         for (uint256 i = 0; i< _nodeAddrs.length; i++){
             address _nodeAddr = _nodeAddrs[i];
-            require(nodeAddrSta[_nodeAddr], "This node is not a pledge node");
+            require(nodeAddrSta[_nodeAddr], "This node is not a node");
             nodeAddrSta[_nodeAddr] = false;
             uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
             if (_nodeAddrIndex > 0){
@@ -250,6 +258,7 @@ contract CommunityFund is ICommunityFund,Ownable{
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         uint256 _time = block.timestamp;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
+        require(!_proposalMsg.proposalSta, "The proposal has already been executed");
         require(_proposalMsg.expire > _time, "The vote on the proposal has expired");
         require(!_proposalMsg.voterSta[_sender], "The proposer has already voted");
         _proposalMsg.allProposers.push(_sender);
