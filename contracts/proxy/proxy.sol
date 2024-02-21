@@ -84,18 +84,19 @@ contract Proxy {
 }
 
 
-contract basePorxy is Proxy {
+contract baseProxy is Proxy {
     event Upgraded(address indexed impl);
     event AdminChanged(address preAdmin, address newAdmin);
     
     modifier onlyAmdin(){
-        require(msg.sender == admin(), "LucaPorxy: Caller not admin");
+        require(msg.sender == admin(), "baseProxy: Caller not admin");
         _;
     }
     
     function changeAdmin(address newAdmin) external onlyAmdin returns(bool) {
+        address preAdmin =  admin();
         _setAdmin(newAdmin);
-        emit AdminChanged(admin(), newAdmin);
+        emit AdminChanged(preAdmin, newAdmin);
         return true;
     } 
     

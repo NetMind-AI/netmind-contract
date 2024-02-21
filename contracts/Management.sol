@@ -19,7 +19,6 @@ interface IManagement {
 }
 
 contract Management is IManagement{
-    using SafeMath for uint256;
     uint256 public  proposalCount;                           
     mapping(uint256 => ProposalMsg) public proposalMsg;
     uint256 public nodeNum;
@@ -113,7 +112,7 @@ contract Management is IManagement{
         _proposalMsg.targetAddr = _targetAddr;
         _proposalMsg.addr = _addr;
         _proposalMsg.data = _data;
-        _proposalMsg.expire = _time.add(86400*3);
+        _proposalMsg.expire = _time + 86400*3;
         _proposalMsg.typeIndex = _typeIndex;
         _proposalMsg.label = _label;
         _proposalMsg.voterSta[_sender] = true;
@@ -135,6 +134,7 @@ contract Management is IManagement{
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         uint256 _time = block.timestamp;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
+        require(!_proposalMsg.proposalSta, "The proposal has already been executed");
         require(_proposalMsg.expire > _time, "The vote on the proposal has expired");
         require(!_proposalMsg.voterSta[_sender], "The proposer has already voted");
         _proposalMsg.proposers.push(_sender);
@@ -171,6 +171,7 @@ contract Management is IManagement{
     }
 
     function addNodeAddr(address _nodeAddr) internal{
+        require(_nodeAddr != address(0), "The address is 0");
         require(!nodeAddrSta[_nodeAddr], "This node is already a node address");
         nodeAddrSta[_nodeAddr] = true;
         uint256 _nodeAddrIndex = nodeAddrIndex[_nodeAddr];
@@ -238,32 +239,4 @@ contract Management is IManagement{
         return nodes;
     }
 
-}
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
 }

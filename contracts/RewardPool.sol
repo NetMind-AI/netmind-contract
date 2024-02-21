@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -105,7 +109,7 @@ interface IConf {
 
 
 contract RewardPool is Initializable, Ownable {
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     address public conf;
     address public Rewardcontract;
     uint256 public DailyMaxMove;
@@ -136,7 +140,12 @@ contract RewardPool is Initializable, Ownable {
         DailyMaxMove = amt;
     }
 
+    constructor(){_disableInitializers();}
+
     function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable) public initializer{
+        require(_conf != address(0), "_conf is zero address");
+        require(_reward != address(0), "_reward is zero address");
+
         conf = _conf;
         Rewardcontract = _reward;
         DailyMaxMove = _dailymaxmove;
@@ -144,16 +153,7 @@ contract RewardPool is Initializable, Ownable {
         Moveable = _moveable;
 
         __Ownable_init_unchained();
-
-        uint chainId;
-        assembly {chainId := chainId}
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+        CONTRACT_DOMAIN = keccak256('Netmind RewardPool V1.0');
     }
 
     function move(uint256 nonce, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public{
@@ -188,17 +188,6 @@ contract RewardPool is Initializable, Ownable {
         emit Move(day, block.timestamp, msg.sender, amt);
     }
 
-    function check(uint256 nonce, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public view returns(address[] memory signs){
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 digest = getDigest(nonce, amt, expir);
-        bytes32 hash = keccak256(abi.encodePacked(prefix, digest));
-
-        for (uint256 i = 0; i < vs.length; i++) {
-            address signAddr = ecrecover(hash, vs[i], rs[i*2], rs[i*2+1]);
-            signs[i] = signAddr;
-        }
-    }
-
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
         for(uint i = 0; i < arr.length - 1; i++) {
             for(uint j = i + 1; j < arr.length; j++) {
@@ -211,6 +200,8 @@ contract RewardPool is Initializable, Ownable {
     }
 
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
@@ -222,8 +213,18 @@ contract RewardPool is Initializable, Ownable {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(nonce, amt, expir)))
+        );
+    }
+
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
         );
     }
 }

@@ -30,6 +30,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -105,7 +109,7 @@ interface IConf {
 
 
 contract Payment is Initializable, Ownable {
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     address public conf;
     uint256 public SigNum;
     mapping(string=>recipt) public recipts;
@@ -113,6 +117,7 @@ contract Payment is Initializable, Ownable {
     struct recipt{
        address payer;
        uint256 amount;
+       uint256 worth;
        uint256 refund;
        uint256 timestamp;
     }
@@ -123,47 +128,56 @@ contract Payment is Initializable, Ownable {
         bytes32 s;
     }
 
-    event Pay(address indexed payer, uint256 amount);
-    event Refund(address indexed payer, uint256 amount);
+    event Pay(string id, address payer, uint256 amount, uint256 worth);
+    event Refund(string id, address payer, uint256 amount);
 
-    function init(address _conf, uint256 _signum) public initializer{
-        conf = _conf;
-        SigNum = _signum;
-
-        __Ownable_init_unchained();
-
-        uint chainId;
-        assembly {chainId := chainId}
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
     }
 
-    function payment(string memory paymentId, uint256 amt) public payable{
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
+    constructor(){_disableInitializers();}
+
+    function init(address _conf, uint256 _signum) public initializer{
+        require(_conf != address(0), "zero address");
+        require(_signum > 0, "zero signum");
+       
+        conf = _conf;
+        SigNum = _signum;
+        __Ownable_init_unchained();
+
+        CONTRACT_DOMAIN = keccak256('Netmind Payment V1.0');
+    }
+
+    function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
          require(R.amount <= 0, "invalid payment Id");
          require(amt == msg.value, "invalid amt");
-         require(msg.sender.code.length == 0, "invalid caller");
 
          R.amount = amt;
          R.payer = msg.sender;
+         R.worth = worth;
          R.timestamp = block.timestamp;
     
-         emit Pay(R.payer, R.amount);
+         emit Pay(paymentId, R.payer, R.amount, R.worth);
     }
 
-    function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public {
+    function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
         require(R.refund <= 0, "already refund");
         require(R.amount > 0, "invalid paymentId");
         require(R.amount >= amt, "invalid amt");
         require(block.timestamp <= expir, "sign expired");
-        require(msg.sender == R.payer, "invalid sender");
+      
 
         //check sign
         uint256 counter;
@@ -185,19 +199,8 @@ contract Payment is Initializable, Ownable {
 
         //refund
         R.refund = amt;
-        payable(msg.sender).transfer(amt);
-        emit Refund(msg.sender, amt);
-    }
-
-    function check(string memory paymentId, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public view returns(address[] memory signs){
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 digest = getDigest(paymentId, amt, expir);
-        bytes32 hash = keccak256(abi.encodePacked(prefix, digest));
-
-        for (uint256 i = 0; i < vs.length; i++) {
-            address signAddr = ecrecover(hash, vs[i], rs[i*2], rs[i*2+1]);
-            signs[i] = signAddr;
-        }
+        payable(R.payer).transfer(amt);
+        emit Refund(paymentId, R.payer, amt);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
@@ -212,6 +215,8 @@ contract Payment is Initializable, Ownable {
     }
 
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
@@ -223,8 +228,18 @@ contract Payment is Initializable, Ownable {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(paymentId, amt, expir)))
+        );
+    }
+
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
         );
     }
 }

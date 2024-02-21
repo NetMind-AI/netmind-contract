@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./proxy.sol";
 
-contract ConfFundPorxy is basePorxy{
-    constructor(address impl) {
+contract FixedLockProxy is baseProxy{
+       constructor(address impl) {
         _setAdmin(msg.sender);
         _setLogic(impl);
     }

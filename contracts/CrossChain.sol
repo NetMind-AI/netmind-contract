@@ -5,7 +5,7 @@ interface IERC20 {
     function transfer(address _to, uint256 _value) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
     function mint(address to, uint256 value) external returns (bool);
-    function burn(uint256 amount) external returns (bool);
+    function burn(uint256 amount) external;
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
 }
 
@@ -37,6 +37,10 @@ abstract contract Initializable {
         if (isTopLevelCall) {
             _initializing = false;
         }
+    }
+
+    function _disableInitializers() internal {
+        _initialized = true;
     }
 }
 
@@ -110,7 +114,7 @@ contract Crosschain  is Initializable,Ownable {
     bool public pause;
     uint256 public nodeNum;
     uint256 public stakeNum;
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public CONTRACT_DOMAIN;
     bool public mainChainSta;
     mapping(string => mapping(address => uint256)) public chargeRate;
     mapping(address => uint256) public tokenSta;
@@ -126,6 +130,7 @@ contract Crosschain  is Initializable,Ownable {
     mapping(address => mapping(uint256 => uint256)) public withdrawLimit;
     uint256 public signNum;
     address public trader;
+    bool private reentrancyLock;
     event UpdatePause(bool sta);
     event WithdrawChargeAmount(address tokenAddr, uint256 amount);
     event AddNodeAddr(address[] nodeAddrs);
@@ -159,10 +164,32 @@ contract Crosschain  is Initializable,Ownable {
         bytes32 s;
     }
 
+    modifier nonReentrant() {
+        require(!reentrancyLock);
+        reentrancyLock = true;
+        _;
+        reentrancyLock = false;
+    }
+
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
+    }
+
     modifier onlyGuard() {
         require(!pause, "Crosschain: The system is suspended");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(
         address _management,
@@ -174,17 +201,7 @@ contract Crosschain  is Initializable,Ownable {
 
     function __Crosschain_init_unchained(bool _sta) internal initializer{
         mainChainSta = _sta;
-        uint chainId;
-        assembly {
-            chainId := chainId
-        }
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
-                chainId,
-                address(this)
-            )
-        );
+         CONTRACT_DOMAIN = keccak256('Netmind Crosschain V1.0');
     }
 
     receive() payable external{
@@ -196,10 +213,12 @@ contract Crosschain  is Initializable,Ownable {
     }
 
     function updateTrader(address _trader) external onlyOwner{
+        require(_trader != address(0), "The address is 0");
         trader = _trader;
     }
 
     function updateExector(address _exector) external onlyOwner{
+        require(_exector != address(0), "The address is 0");
         exector = _exector;
     }
 
@@ -244,10 +263,11 @@ contract Crosschain  is Initializable,Ownable {
         emit UpdateChainCharge(_chain, _sta, _tokens, _fees);
     }
 
-    function withdrawChargeAmount(address[] calldata tokenAddrs, address receiveAddr) external onlyOwner{
+    function withdrawChargeAmount(address[] calldata tokenAddrs, address receiveAddr) external onlyOwner nonReentrant(){
         require( receiveAddr != address(0),"receiveAddr address cannot be 0");
         for (uint256 i = 0; i< tokenAddrs.length; i++){
             uint256 _feeAmount = feeAmount[tokenAddrs[i]];
+            feeAmount[tokenAddrs[i]] = 0;
             if(tokenAddrs[i] == address(0x0)){
                 require(address(this).balance >= _feeAmount, "Insufficient amount of balance");
                 payable(receiveAddr).transfer(_feeAmount);
@@ -255,7 +275,6 @@ contract Crosschain  is Initializable,Ownable {
                 IERC20 token = IERC20(tokenAddrs[i]);
                 token.transfer(receiveAddr,_feeAmount);
             }
-            feeAmount[tokenAddrs[i]] = 0;
             emit WithdrawChargeAmount(tokenAddrs[i], _feeAmount);
         }
     }
@@ -294,14 +313,13 @@ contract Crosschain  is Initializable,Ownable {
         emit DeleteNodeAddr(_nodeAddrs);
     }
 
-    function stakeToken(string memory _chain, string memory receiveAddr, address tokenAddr, uint256 _amount) payable external onlyGuard {
+    function stakeToken(string memory _chain, string memory receiveAddr, address tokenAddr, uint256 _amount) payable external onlyGuard nonReentrant(){
         address _sender = msg.sender;
         require( chainSta[_chain], "Crosschain: The chain does not support transfer");
         uint256 _sta = tokenSta[tokenAddr];
         IERC20 token = IERC20(tokenAddr);
-        if(mainChainSta){
+        if(tokenAddr == address(0)){
             _amount = msg.value;
-            require(_amount > 0, "Value must be greater than 0");
         }else {
             require(msg.value == 0, "Value must be equal to 0");
             require(_sta > 0, "Incorrect token state setting");
@@ -309,11 +327,12 @@ contract Crosschain  is Initializable,Ownable {
         }
         require(verfylimit(tokenAddr, _amount),"Extraction limit exceeded");
         uint256 _fee = chargeRate[_chain][tokenAddr];
+        require(_amount > _fee, "Amount must be greater than fee");
         _amount = _amount - _fee;
         feeAmount[tokenAddr] = feeAmount[tokenAddr] + _fee;
         stakeMsg[++stakeNum] = Stake(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
-        if(!mainChainSta && _sta == 2){
-            require(token.burn(_amount), "Token burn failed");
+        if(_sta == 2){
+            token.burn(_amount);
         }
         emit StakeToken(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
     }
@@ -327,8 +346,9 @@ contract Crosschain  is Initializable,Ownable {
     )
         external
         onlyGuard
+        nonReentrant()
+        notContract()
     {
-        require(addrs[0].code.length == 0, "Crosschain: The caller is the contract");
         require( trader == msg.sender, "Crosschain: The trader error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");
         require( !status[strs[0]][strs[1]], "Crosschain: The transaction has been withdrawn");
@@ -382,8 +402,18 @@ contract Crosschain  is Initializable,Ownable {
         return (_addrArray);
     }
     
+    function DOMAIN_SEPARATOR() public view returns(bytes32){
+        return keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(uint256 chainId,address verifyingContract)'),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
     function _transferToken(address[2] memory addrs, uint256[2] memory uints, string[] memory strs) internal {
-        if(mainChainSta){
+        if(addrs[1] == address(0)){
             require(address(this).balance >= uints[0], "Insufficient amount of balance");
             payable(addrs[0]).transfer(uints[0]);
         }else {
@@ -400,6 +430,8 @@ contract Crosschain  is Initializable,Ownable {
     }
 
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _nodeAddr = ecrecover(hash, _sig.v, _sig.r, _sig.s);
@@ -428,7 +460,7 @@ contract Crosschain  is Initializable,Ownable {
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
+                DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(_data.userAddr, _data.contractAddr,  _data.amount, _data.expiration, _data.chain, _data.txid))
             )
         );

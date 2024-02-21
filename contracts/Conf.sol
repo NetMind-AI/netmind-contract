@@ -10,6 +10,10 @@ contract Initialize {
         _;
         initialized = true;
     }
+
+    function _disableInitializers() internal {
+        initialized = true;
+    }
 }
 
 contract Conf is Initialize {
@@ -58,40 +62,17 @@ contract Conf is Initialize {
     //new reward opition, that will reset the reward proportion. new reward proportion: staking => 50%, liquidity => 30%, node => 20%
     uint256 public liquidity_awd; //Award of liquidity proportion => 30% [THD]
 
+    constructor(){_disableInitializers();}
+    
     function initialize() external init {
         begin = block.timestamp;
         award = 10**28;
         wards[msg.sender] = 1;
     }
 
-    function files(string[] calldata whats, address[] calldata dstas) external auth {
-         require(whats.length == dstas.length, "Number of parameters does not match"); 
-         bytes32 result;
-         string memory str;
-         for (uint256 i = 0; i < whats.length; i++) { 
-            str = whats[i];
-            assembly{
-                 result := mload(add(str,32))
-            }
-            file(result, dstas[i]);
-         }
-     }
-
-    function files(string[] calldata whats, uint[] calldata datas) external auth {
-         require(whats.length == datas.length, "Number of parameters does not match"); 
-         bytes32 result;
-         string memory str;
-         for (uint256 i = 0; i < whats.length; i++) { 
-            str = whats[i];
-            assembly{
-                 result := mload(add(str,32))
-            }
-            file(result, datas[i]);
-         }
-    }
-
     // --- Administration ---
     function file(bytes32 what, address dst) public auth {
+        require(dst != address(0), "zero address");
         if (what == "WNMT") WNMT = dst;
         else if (what == "Training") Training = dst;
         else if (what == "Inference") Inference = dst;
@@ -140,7 +121,7 @@ contract Conf is Initialize {
         require(begin > 0, "begin not set");
         require(node_awd > 0, "node_awd not set");
         uint256 i;
-        if (block.timestamp < begin + 10 * 356 days) i = miner_awd_1;
+        if (block.timestamp < begin + 10 * 365 days) i = miner_awd_1;
         else if(block.timestamp < begin + 40 * 365 days) i = miner_awd_2;
         else i = miner_awd_3;
 
@@ -167,7 +148,7 @@ contract Conf is Initialize {
         require(time > begin, "error time");
         require(node_awd > 0, "node_awd not set");
         uint256 i;
-        if (time < begin + 10 * 356 days) i = miner_awd_1;
+        if (time < begin + 10 * 365 days) i = miner_awd_1;
         else if(time < begin + 40 * 365 days) i = miner_awd_2;
         else i = miner_awd_3;
 

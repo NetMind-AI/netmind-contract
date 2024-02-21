@@ -44,6 +44,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ledger is Initializable, ILedger{
@@ -72,6 +76,8 @@ contract Ledger is Initializable, ILedger{
         address[] voteAddrList;          
         bool consensusSta;       
     }
+
+    constructor(){_disableInitializers();}
 
     function init(address _conf) external initializer{
         conf = Iconf(_conf);

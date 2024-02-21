@@ -40,6 +40,10 @@ abstract contract Initializable {
             _initializing = false;
         }
     }
+
+    function _disableInitializers() internal {
+        _initialized = true;
+    }
 }
 
 contract Ownable is Initializable{
@@ -109,7 +113,6 @@ contract Ownable is Initializable{
 }
 
 contract TrainingTask is Ownable{
-    using SafeMath for uint256;
     IAccountManage public accountManage;
     address public conf;
     uint256 public num;
@@ -143,6 +146,8 @@ contract TrainingTask is Ownable{
         require(msg.sender == IConf(conf).trainingTaskExecutor(), "caller is not the trainingTaskExecutor");
         _;
     }
+
+    constructor(){_disableInitializers();}
 
     function init(
         address _conf,
@@ -186,11 +191,11 @@ contract TrainingTask is Ownable{
         upateOrderIdSta[orderId] = true;
         JobMsg storage _jobMsg = jobMsg[_num];
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1 , "task status error");
         (uint256 userBalance,,) = accountManage.queryUserMsgById(userId);
         require(userBalance >= freezeAmount, "Insufficient balance");
         require(accountManage.freeze(userId, freezeAmount, _jobMsg.jobType), "Failed to freeze user amount");
-        _jobMsg.freezeAmount = _jobMsg.freezeAmount.add(freezeAmount);
+        _jobMsg.freezeAmount = _jobMsg.freezeAmount + freezeAmount;
         _jobMsg.state = 1;
         emit UpdateJob(userId, jobId, freezeAmount, _jobMsg.state, _jobMsg.jobType, orderId);
     }
@@ -201,11 +206,11 @@ contract TrainingTask is Ownable{
         require(!execOrderIdSta[orderId], "The order number has already been used");
         execOrderIdSta[orderId] = true;
         JobMsg storage _jobMsg = jobMsg[_num];
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1, "task status error");
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
         require(_jobMsg.freezeAmount >= usageAmount, "The frozen quantity is not enough to be deducted");
-        _jobMsg.usageAmount = _jobMsg.usageAmount.add(usageAmount);
-        _jobMsg.freezeAmount = _jobMsg.freezeAmount.sub(usageAmount);
+        _jobMsg.usageAmount = _jobMsg.usageAmount + usageAmount;
+        _jobMsg.freezeAmount = _jobMsg.freezeAmount - usageAmount;
         require(accountManage.execDebit(userId, usageAmount, 0, _jobMsg.jobType), "Deduction failed");
         emit ExecJobDebit(userId, jobId, _jobMsg.freezeAmount, usageAmount, _jobMsg.jobType, orderId);
     }
@@ -214,11 +219,11 @@ contract TrainingTask is Ownable{
         uint256 _num = userJobMsg[jobId];
         require( _num > 0, "JobId does not exist");
         JobMsg storage _jobMsg = jobMsg[_num];
-        require(_jobMsg.state == 1 || _jobMsg.state == 4, "task status error");
+        require(_jobMsg.state == 1, "task status error");
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");
         require(_jobMsg.freezeAmount >= usageAmount, "The frozen quantity is not enough to be deducted");
-        _jobMsg.usageAmount = _jobMsg.usageAmount.add(usageAmount);
-        _jobMsg.surplusAmount = _jobMsg.freezeAmount.sub(usageAmount);
+        _jobMsg.usageAmount = _jobMsg.usageAmount + usageAmount;
+        _jobMsg.surplusAmount = _jobMsg.freezeAmount - usageAmount;
         _jobMsg.freezeAmount = 0;
         require(accountManage.execDebit(userId, usageAmount, _jobMsg.surplusAmount, _jobMsg.jobType), "Deduction failed");
         _jobMsg.state = state;
@@ -231,32 +236,4 @@ contract TrainingTask is Ownable{
         return (_jobMsg.freezeAmount, _jobMsg.usageAmount, _jobMsg.surplusAmount, _jobMsg.state, _jobMsg.jobType);
     }
 
-}
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
 }
