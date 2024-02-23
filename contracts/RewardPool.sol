@@ -220,7 +220,7 @@ contract RewardPool is Initializable, Ownable {
         Moveable -= amt;
         payable(address(0)).transfer(amt);
     
-        emit Move(day, block.timestamp, msg.sender, amt);
+        emit Burn(day, block.timestamp, msg.sender, amt);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
