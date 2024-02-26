@@ -107,9 +107,10 @@ contract FixedLock is Initializable {
     }
 
     function lock(uint256 amt) public payable notContract returns(uint256 id){
+        amt = amt * 1e18;
         require(block.timestamp > startTime, "activit not start");
         require(block.timestamp < endTime, "activit end");
-        require(msg.value == amt, "invaild NMT value");
+        require(msg.value == amt , "invaild NMT value");
         
         //save LockInfo
         totalLocked += amt;
@@ -140,6 +141,7 @@ contract FixedLock is Initializable {
     }
 
     function unlock(uint256 id, uint256 amt) public notContract{
+        amt = amt * 1e18;
         LockInfo storage lf = lockInfo[id];
         require(lf.locked > 0, "lockId unexsit");
         require(lf.owner == msg.sender, "only owner can call");
