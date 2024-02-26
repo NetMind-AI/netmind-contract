@@ -171,10 +171,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         reentrancyLock = false;
     }
 
-    fallback() external{
-
-    }
-
     function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
     }
