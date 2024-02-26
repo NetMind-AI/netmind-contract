@@ -206,14 +206,6 @@ contract Crosschain  is Initializable,Ownable {
          CONTRACT_DOMAIN = keccak256('Netmind Crosschain V1.0');
     }
 
-    receive() payable external{
-
-    }
-
-    fallback() payable external{
-
-    }
-
     function updateTrader(address _trader) external onlyOwner{
         require(_trader != address(0), "The address is 0");
         trader = _trader;

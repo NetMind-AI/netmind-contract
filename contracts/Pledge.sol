@@ -177,13 +177,6 @@ contract Pledge is Initializable,Ownable,IPledge{
         __Ownable_init_unchained();
     }
 
-    receive() payable external{
-
-    }
-
-    fallback() payable external{
-
-    }
     
     function updateGuarder(address _guarder) external onlyOwner{
         guarder = _guarder;

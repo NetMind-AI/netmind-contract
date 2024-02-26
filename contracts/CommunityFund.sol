@@ -171,10 +171,6 @@ contract CommunityFund is ICommunityFund,Ownable{
         reentrancyLock = false;
     }
 
-    fallback() external{
-
-    }
-       
     function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
         emit UpdateLockTime(_LockTime);
