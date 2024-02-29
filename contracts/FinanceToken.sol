@@ -54,7 +54,9 @@ contract FinanceToken is Initializable{
 
     event Launch(uint256 indexed financingId, address indexed sponsor);
     event PurchaseNMTWithToken(uint256 _purchaseNumber, address _sender, uint256 _purchaseNMTQuantity, address _paymentToken, uint256 _paymentTokenAmount);
-
+    event WithdrawNMTToken(uint256 _purchaseNumber, uint256 withdrawAmount);
+    event Refund(uint256 _financingId, uint256 amount);
+    
     struct FinanceMsg {
         address sponsor;
         uint256 endTime;
@@ -161,19 +163,21 @@ contract FinanceToken is Initializable{
             uint256 amount = calcToken(_userMsg);
             _userMsg.withdrawnAmount += amount;
             withdraw += amount;
+            emit WithdrawNMTToken(_purchaseNumbers[i], amount);
         }
         require(withdraw > 0, "withdraw error");
         require(IERC20(nmtToken).transfer(msg.sender,withdraw), "Token transfer failed");
     }
 
-    function refund(uint256 _purchaseNumber) external nonReentrant(){
-        FinanceMsg storage finance = financeMsg[_purchaseNumber];
+    function refund(uint256 _financingId) external nonReentrant(){
+        FinanceMsg storage finance = financeMsg[_financingId];
         require(finance.sellNMTQuantity > 0, "wrong quantity");
         require(finance.endTime < block.timestamp, "time error");
         uint256 _amount = finance.sellNMTQuantity - finance.soldNMTQuantity;
         require(_amount > 0, "refund error");
         finance.soldNMTQuantity = finance.sellNMTQuantity;
         require(IERC20(nmtToken).transfer(finance.sponsor,_amount), "Token transfer failed");
+        emit Refund(_financingId, _amount);
     }
     
     function queryUserMsg(address _userAddr) external view returns (uint256[] memory, uint256[] memory, UserMsg[] memory){
