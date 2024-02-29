@@ -82,6 +82,7 @@ contract FixedLock is Initializable {
     constructor(){_disableInitializers();}
     
     function init(uint256 _endTime, uint256 _lockDuration, uint256 _rewardPropotion, uint256 _rewardDelay, bool _isMainNet) public initializer{
+        require(_endTime > block.timestamp,"invalid time");
         startTime = block.timestamp;
         endTime = _endTime;
         releaseTimes = 8;
