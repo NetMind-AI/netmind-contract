@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.0 ;
+pragma solidity ^0.8.0 ;
 
 interface IProxy {
     function changeAdmin(address newAdmin) external returns(bool);
@@ -57,10 +57,6 @@ contract Management is IManagement{
         }
     }
  
-    fallback() external{
-
-    }
-   
     function addNodePropose(address _addr) override external{
         require(!nodeAddrSta[_addr], "This node is already a node address");
         bytes memory data = new bytes(0x00);

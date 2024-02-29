@@ -114,13 +114,16 @@ contract RewardPool is Initializable, Ownable {
     address public Rewardcontract;
     uint256 public DailyMaxMove;
     uint256 public SigNum;
-    uint256 public Nonce;
+    uint256 public MoveNonce;
     mapping(uint256 => uint256) public DailyMoved;
 
     //manage move amount
     uint256 public Moveable;
+    uint256 public BurnNonce;
 
     event Move(uint256 indexed day, uint256 timestamp, address op, uint256 amt);
+    event Burn(uint256 indexed day, uint256 timestamp, address op, uint256 amt);
+
 
     struct Sig {
         uint8 v;
@@ -158,7 +161,7 @@ contract RewardPool is Initializable, Ownable {
 
     function move(uint256 nonce, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public{
         //check input
-        require(nonce == Nonce++, "error nonce");
+        require(nonce == MoveNonce++, "error nonce");
         require(amt <= Moveable, "out of moveable");
         require(block.timestamp <= expir, "sign expired");
         
@@ -186,6 +189,38 @@ contract RewardPool is Initializable, Ownable {
         payable(Rewardcontract).transfer(amt);
     
         emit Move(day, block.timestamp, msg.sender, amt);
+    }
+
+    function burn(uint256 nonce, uint256 amt,uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public{
+        //check input
+        require(nonce == BurnNonce++, "error nonce");
+        require(amt <= Moveable, "out of moveable");
+        require(block.timestamp <= expir, "sign expired");
+        
+        //check sign
+        uint256 counter;
+        uint256 len = vs.length;
+        require(len*2 == rs.length, "Signature parameter length mismatch");
+        bytes32 digest = getDigest(nonce, amt, expir);
+        address[] memory signAddrs = new address[](len);
+        for (uint256 i = 0; i < len; i++) {
+            (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
+            signAddrs[i] = signAddr;
+            if (result){
+                counter++;
+            }
+        }
+        require(counter >= SigNum, "lack of signature");
+        require(areElementsUnique(signAddrs), "duplicate signature");
+
+        //move 
+        uint256 day = block.timestamp / 1 days;
+        DailyMoved[day]+= amt;
+        require(DailyMoved[day] <= DailyMaxMove, "Out of daily max move");
+        Moveable -= amt;
+        payable(address(0)).transfer(amt);
+    
+        emit Burn(day, block.timestamp, msg.sender, amt);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
