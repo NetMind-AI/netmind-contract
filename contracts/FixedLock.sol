@@ -173,10 +173,10 @@ contract FixedLock is Initializable {
         require(lf.locked > 0, "lockId unexsit");
         require(lf.owner == msg.sender, "only owner can call");
         require(lf.rewardsEarned == 0, "already claim");
-        
+
 
         //claim reward
-        uint256 reward = lf.locked * rewardPropotion / 1000;
+        uint256 reward = checkReward(id);
         require(reward > 0, "zero reward");
         require(address(this).balance - reward >= totalLocked, "reward used up");
         lf.rewardsEarned = reward;
