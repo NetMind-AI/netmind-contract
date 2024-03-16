@@ -133,6 +133,8 @@ contract Crosschain  is Initializable,Ownable {
     bool private reentrancyLock;
     mapping(address => uint256) public transferThreshold;
     mapping(address => mapping(uint256 => uint256)) public transferDailyUsage;
+    address public blacker;
+    mapping(address => bool) public blacklist;
     event UpdatePause(bool sta);
     event WithdrawChargeAmount(address tokenAddr, uint256 amount);
     event AddNodeAddr(address[] nodeAddrs);
@@ -173,6 +175,10 @@ contract Crosschain  is Initializable,Ownable {
         reentrancyLock = false;
     }
 
+    modifier onlyBlocker{
+        require(msg.sender == blacker, "Reward Contract: only blocker");
+        _;
+    }
     modifier notContract() {
         require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
         _;
@@ -209,6 +215,24 @@ contract Crosschain  is Initializable,Ownable {
     function updateTrader(address _trader) external onlyOwner{
         require(_trader != address(0), "The address is 0");
         trader = _trader;
+    }
+    
+    function setBlacker(address guy) public onlyOwner{
+        require(guy != address(0), "zero address");
+        blacker = guy;
+    }
+   
+    function addBlacklist(address[] memory guys) public onlyBlocker {
+        for (uint256 i = 0; i< guys.length; i++){
+           require(guys[i] != address(0), "zero address");
+            blacklist[guys[i]] = true;
+        }
+    }
+
+    function removeBlacklist(address[] memory guys) public onlyOwner{
+        for (uint256 i = 0; i< guys.length; i++){
+            blacklist[guys[i]] = false;
+        }
     }
 
     function updateExector(address _exector) external onlyOwner{
@@ -336,7 +360,7 @@ contract Crosschain  is Initializable,Ownable {
         emit StakeToken(tokenAddr, _sender, receiveAddr, _amount, _fee, _chain);
     }
 
-    function transferToken(
+    function bridgeToken(
         address[2] calldata addrs,
         uint256[2] calldata uints,
         string[] calldata strs,
@@ -348,6 +372,7 @@ contract Crosschain  is Initializable,Ownable {
         nonReentrant()
         notContract()
     {
+        require(!blacklist[addrs[0]], "Crosschain: access denied");
         require( trader == msg.sender, "Crosschain: The trader error");
         require( block.timestamp<= uints[1], "Crosschain: The transaction exceeded the time limit");
         require( !status[strs[0]][strs[1]], "Crosschain: The transaction has been withdrawn");
