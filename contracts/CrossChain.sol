@@ -140,7 +140,7 @@ contract Crosschain  is Initializable,Ownable {
     event AddNodeAddr(address[] nodeAddrs);
     event DeleteNodeAddr(address[] nodeAddrs);
     event UpdateChainCharge(string chain, bool sta, address[] tokens, uint256[] fees);
-    event BridgeToken(address indexed _tokenAddr, address _receiveAddr, uint256 _amount, string chain, string txid);
+    event TransferToken(address indexed _tokenAddr, address _receiveAddr, uint256 _amount, string chain, string txid);
     event StakeToken(address indexed _tokenAddr, address indexed _userAddr, string receiveAddr, uint256 amount, uint256 fee,string chain);
     event UpdateThreshold(address tokenAddr, uint256 thresholdType, uint256 threshold);
     
@@ -460,7 +460,7 @@ contract Crosschain  is Initializable,Ownable {
             }
             
         }
-        emit BridgeToken(addrs[0], addrs[1], uints[0], strs[0], strs[1]);
+        emit TransferToken(addrs[0], addrs[1], uints[0], strs[0], strs[1]);
     }
 
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
