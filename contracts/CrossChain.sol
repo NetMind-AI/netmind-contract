@@ -176,7 +176,7 @@ contract Crosschain  is Initializable,Ownable {
     }
 
     modifier onlyBlocker{
-        require(msg.sender == blacker, "Reward Contract: only blocker");
+        require(msg.sender == blacker, "only blocker");
         _;
     }
     modifier notContract() {
