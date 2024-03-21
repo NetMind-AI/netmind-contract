@@ -113,13 +113,14 @@ contract Payment is Initializable, Ownable {
     address public conf;
     uint256 public SigNum;
     mapping(string=>recipt) public recipts;
-    
+    bool public burnProfit;
     struct recipt{
        address payer;
        uint256 amount;
        uint256 worth;
        uint256 refund;
        uint256 timestamp;
+       bool disFlag;
     }
   
     struct Sig {
@@ -130,6 +131,7 @@ contract Payment is Initializable, Ownable {
 
     event Pay(string id, address payer, uint256 amount, uint256 worth);
     event Refund(string id, address payer, uint256 amount);
+    event Distribute(string id, address reciver, uint256 amount, uint256 burn);
 
     modifier notContract() {
         require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
@@ -157,6 +159,10 @@ contract Payment is Initializable, Ownable {
         CONTRACT_DOMAIN = keccak256('Netmind Payment V1.0');
     }
 
+    function setBurnProfit(bool flag) public onlyOwner{
+        burnProfit = flag;
+    }
+
     function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
          require(R.amount <= 0, "invalid payment Id");
@@ -173,6 +179,7 @@ contract Payment is Initializable, Ownable {
     function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
+        require(!R.disFlag, "already distributed");
         require(R.refund <= 0, "already refund");
         require(R.amount > 0, "invalid paymentId");
         require(R.amount >= amt, "invalid amt");
@@ -203,6 +210,46 @@ contract Payment is Initializable, Ownable {
         emit Refund(paymentId, R.payer, amt);
     }
 
+    function distribute(string memory paymentId, address receiver, uint256 amt, uint256 burn, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+        //check args
+        recipt storage R = recipts[paymentId];
+        if (burnProfit) {
+            require(amt == 0, "brun: expect zero amount");
+            require(receiver == address(0), "burn: expect zero address");
+        } else {
+            require(receiver != address(0), "zero address"); 
+            require(amt > 0, "invalid amount");              
+        }
+        
+        require(!R.disFlag, "already distributed");
+        require(block.timestamp <= expir, "sign expired");
+        
+
+        //check sign
+        uint256 counter;
+        uint256 len = vs.length;
+        require(len*2 == rs.length, "Signature parameter length mismatch");
+
+        bytes32 digest = getDigest(paymentId, receiver, amt, burn, expir);
+        address[] memory signAddrs = new address[](len);
+        for (uint256 i = 0; i < len; i++) {
+            (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
+            signAddrs[i] = signAddr;
+            if (result){
+                counter++;
+            }
+        }
+
+        require(counter >= SigNum, "lack of signature");
+        require(areElementsUnique(signAddrs), "duplicate signature");
+
+        //distribute
+        R.disFlag = true;
+        if (amt > 0) payable(receiver).transfer(amt);
+        if (burn> 0) payable(address(0)).transfer(burn);
+        emit Distribute(paymentId, receiver, amt, burn);
+    }
+
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
         for(uint i = 0; i < arr.length - 1; i++) {
             for(uint j = i + 1; j < arr.length; j++) {
@@ -230,6 +277,15 @@ contract Payment is Initializable, Ownable {
                 '\x19\x01',
                 DOMAIN_SEPARATOR(),
                 keccak256(abi.encode(paymentId, amt, expir)))
+        );
+    }
+
+    function getDigest(string memory paymentId, address reciver, uint256 amt, uint256 burn, uint256 expir) internal view returns(bytes32 digest){
+        digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(paymentId, reciver, amt, burn, expir)))
         );
     }
 
