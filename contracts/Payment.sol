@@ -104,7 +104,11 @@ contract Ownable is Initializable{
 
 
 interface IConf {
-    function acts(address ) external view returns(bool);
+    function acts(address) external view returns(bool);
+}
+
+interface ICleaner {
+    function distribute(address receiver, uint256 amount, uint256 burn) external returns(bool);
 }
 
 
@@ -114,6 +118,14 @@ contract Payment is Initializable, Ownable {
     uint256 public SigNum;
     mapping(string=>recipt) public recipts;
     bool public burnProfit;
+
+    //new erquirements args
+    address public agent;
+    address public cleaner;
+    address[] internal whiteList;
+    mapping(string=>agentRecipt) public agentRecipts;
+ 
+
     struct recipt{
        address payer;
        uint256 amount;
@@ -121,6 +133,13 @@ contract Payment is Initializable, Ownable {
        uint256 refund;
        uint256 timestamp;
        bool disFlag;
+    }
+
+    struct agentRecipt{
+        string paycode;
+        uint256 worth;
+        uint256 timestamp;
+        bool disFlag;
     }
   
     struct Sig {
@@ -130,12 +149,25 @@ contract Payment is Initializable, Ownable {
     }
 
     event Pay(string id, address payer, uint256 amount, uint256 worth);
+    event AgentPay(string id, string paycode, uint256 worth);
     event Refund(string id, address payer, uint256 amount);
     event Distribute(string id, address reciver, uint256 amount, uint256 burn);
-
+    
     modifier notContract() {
         require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
         _;
+    }
+
+    modifier onlyAgent{
+        require(msg.sender == agent, "Only agent is allowed");
+        _;
+    }
+
+    function _isInWhilteList(address addr) internal view returns(bool){
+        for (uint8 i = 0; i < whiteList.length; i++){
+            if (addr == whiteList[i]) return true;
+        }
+        return false;
     }
 
     function _isContract(address addr) internal view returns (bool) {
@@ -144,6 +176,24 @@ contract Payment is Initializable, Ownable {
             size := extcodesize(addr)
         }
         return size > 0;
+    }
+
+    function setAgent(address _agent) public onlyOwner{
+        require(agent != address(0), "zero address");
+        agent = _agent;
+    }
+
+    function setCleaner(address _cleaner) public onlyOwner{
+        require(agent != address(0), "zero address");
+        cleaner = _cleaner;
+    }
+
+    function setWhiteList(address[] calldata uers) public onlyAgent{
+        whiteList = uers;
+    }
+
+    function getWhiteList() public view returns(address[] memory){
+        return whiteList;
     }
 
     constructor(){_disableInitializers();}
@@ -165,7 +215,7 @@ contract Payment is Initializable, Ownable {
 
     function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
-         require(R.amount <= 0, "invalid payment Id");
+         require(R.amount <= 0, "PaymentId exist");
          require(amt == msg.value, "invalid amt");
 
          R.amount = amt;
@@ -174,6 +224,17 @@ contract Payment is Initializable, Ownable {
          R.timestamp = block.timestamp;
     
          emit Pay(paymentId, R.payer, R.amount, R.worth);
+    }
+
+    function agentPayment(string memory paymentId, string memory paycode, uint256 worth) public onlyAgent{
+        agentRecipt storage R = agentRecipts[paymentId];
+        require(R.worth == 0, "PaymentId exist");
+
+        R.paycode = paycode;
+        R.worth = worth;
+        R.timestamp = block.timestamp;
+
+        emit AgentPay(paymentId, paycode, worth);
     }
 
     function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
@@ -218,6 +279,7 @@ contract Payment is Initializable, Ownable {
             require(receiver == address(0), "burn: expect zero address");
         } else {
             require(receiver != address(0), "zero address"); 
+            require(_isInWhilteList(receiver), "not Whiltelist user");
             require(amt > 0, "invalid amount");              
         }
         
@@ -249,6 +311,44 @@ contract Payment is Initializable, Ownable {
         if (burn> 0) payable(address(0)).transfer(burn);
         emit Distribute(paymentId, receiver, amt, burn);
     }
+
+    function agentDistribute(string memory paymentId, address receiver, uint256 amt, uint256 burn, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+        //TODO dock to trade
+        agentRecipt storage R = agentRecipts[paymentId];
+        if (burnProfit) {
+            require(amt == 0, "brun: expect zero amount");
+            require(receiver == address(0), "burn: expect zero address");
+        } else {
+            require(receiver != address(0), "zero address"); 
+            require(_isInWhilteList(receiver), "not Whiltelist user");
+            require(amt > 0, "invalid amount");              
+        }
+
+        //check sign
+        uint256 counter;
+        uint256 len = vs.length;
+        require(len*2 == rs.length, "Signature parameter length mismatch");
+
+        bytes32 digest = getDigest(paymentId, receiver, amt, burn, expir);
+        address[] memory signAddrs = new address[](len);
+        for (uint256 i = 0; i < len; i++) {
+            (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
+            signAddrs[i] = signAddr;
+            if (result){
+                counter++;
+            }
+        }
+
+        require(counter >= SigNum, "lack of signature");
+        require(areElementsUnique(signAddrs), "duplicate signature");
+
+        //distribute
+        R.disFlag = true;
+        require(ICleaner(cleaner).distribute(receiver, amt, burn),"cleaner feild");
+
+        emit Distribute(paymentId, receiver, amt, burn);
+    }
+   
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
         for(uint i = 0; i < arr.length - 1; i++) {
@@ -299,4 +399,3 @@ contract Payment is Initializable, Ownable {
         );
     }
 }
-
