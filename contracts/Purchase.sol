@@ -128,7 +128,7 @@ contract Purchase is Initializable,Ownable{
     string public receiver;                           
     mapping(string => bool) public orderId;  
     
-    event SwapToken(uint256 _amount, string _orderId);
+    event SwapToken(uint256 _usdcAmount, uint256 _nmtAmount, string _orderId);
     
     modifier nonReentrant() {
         require(!reentrancyLock);
@@ -181,7 +181,7 @@ contract Purchase is Initializable,Ownable{
         amounts[1] = amounts[1] / 100000000000 * 100000000000;
         IERC20(nmtToken).approve(crosschain, amounts[1]);
         ICrosschain(crosschain).stakeToken("Netmind", receiver, nmtToken, amounts[1]);
-        emit SwapToken(_amount, _orderId);
+        emit SwapToken(_amount, amounts[1], _orderId);
     }
     
     function calculateAmountOutMin(uint amountIn) public view returns (uint) {
