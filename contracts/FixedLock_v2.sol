@@ -169,7 +169,7 @@ contract FixedLock is Initializable {
             lockInfo[i].locked = lockInfo[i].locked *  newTotalLocked / totalLocked;
         }
 
-        uint256 vest = address(this).balance - target;
+        uint256 vest = address(this).balance - newTotalLocked;
         payable(vestReceiver).transfer(vest);
 
 
