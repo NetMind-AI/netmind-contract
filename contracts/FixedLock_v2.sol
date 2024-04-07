@@ -86,7 +86,7 @@ contract FixedLock is Initializable {
     uint256 public endTime;
     uint256 public releaseStart;      //2026-04-16 00:00:00
     uint256 public releaseEnd;        //2030-04-16 00:00:00    
-    uint256 public releaseSpeed;      //relesase per second
+    uint256 public releaseDuration;   
     uint256 public totalLocked;
 
     uint256 public rewardPropotion;
@@ -160,17 +160,16 @@ contract FixedLock is Initializable {
         //tearget = 500_0000e18;
         releaseStart = start;
         releaseEnd = start + 4 * 365 days;
+        releaseDuration = releaseEnd - releaseStart;
+
         uint256 newTotalLocked = target* 1e18;
        
-        releaseSpeed = newTotalLocked / (releaseEnd - releaseStart);
-        
         for(uint256 i = 1; i <= lockId; i++){
             lockInfo[i].locked = lockInfo[i].locked *  newTotalLocked / totalLocked;
         }
 
         uint256 vest = address(this).balance - newTotalLocked;
         payable(vestReceiver).transfer(vest);
-
 
         totalLocked = newTotalLocked;
         isReset = true;
