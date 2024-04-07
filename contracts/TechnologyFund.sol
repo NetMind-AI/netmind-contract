@@ -418,14 +418,14 @@ contract TechnologyFund is ITechnologyFund,Ownable{
     }
 
     function calcRelease(uint256 time) public view returns (uint256) {
-        uint256 month = 30 * 86400;
-        uint256 _LockTime = LockTime;
-        if(time >=_LockTime + 120 * month){
+        uint256 year = 365;
+        time = (time - LockTime) / 1 days;
+        if(time >=year * 10){
             return 1000 * 1e22;
-        }else if(time >=_LockTime + 60 * month){
-            return 600* 1e22 + 400 * 1e22 * (time - _LockTime - 60 * month)/60/month;
-        }else if(time >=_LockTime + 6 * month){
-            return 600 * 1e22 * (time - _LockTime - 6 * month)/54/month;
+        }else if(time >=year * 5){
+            return 600* 1e22 + 400 * 1e22 * (time - year * 5)/(5 * year);
+        }else if(time >= year/2){
+            return 600 * 1e22 * (time - year/2)/(5 * year - year/2);
         }else {
             return 0;
         }

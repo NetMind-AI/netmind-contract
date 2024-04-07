@@ -409,14 +409,14 @@ contract StrategicFund is IStrategicFund,Ownable{
     }
 
     function calcRelease(uint256 time) public view returns (uint256) {
-        uint256 month = 30 * 86400;
-        uint256 _LockTime = LockTime;
-        if(time >=_LockTime + 60 * month){
+        uint256 year = 365;
+        time = (time - LockTime) / 1 days;
+        if(time >= 5 * year){
             return 750 * 1e22;
-        }else if(time >=_LockTime + 6 * month){
-            return 300* 1e22 + 450 * 1e22 * (time - _LockTime - 6 * month)/54/month;
-        }else if(time >=_LockTime){
-            return 450 * 1e22 * (time - _LockTime)/6/month;
+        }else if(time >= year/2){
+            return 300* 1e22 + 450 * 1e22 * (time - year/2)/(5 * year - year/2);
+        }else if(time >= 0){
+            return 450 * 1e22 * time/(year/2);
         }else {
             return 0;
         }

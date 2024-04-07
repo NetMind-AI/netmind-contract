@@ -420,20 +420,20 @@ contract CommunityFund is ICommunityFund,Ownable{
     }
 
     function calcRelease(uint256 time) public view returns (uint256) {
-        uint256 intervalTime = 24 * 30 * 86400;
-        uint256 _LockTime = LockTime;
-        if(time >=_LockTime + intervalTime*5){
+        uint256 intervalTime = 2 * 365;
+        time = (time - LockTime) / 1 days;
+        if(time >=intervalTime*5){
             return 1150 * 1e22;
-        }else if(time >=_LockTime + intervalTime*4){
-            return 1050 * 1e22 + 100 * 1e22 * (time - _LockTime - intervalTime*4)/intervalTime;
-        }else if(time >=_LockTime + intervalTime*3){
-            return 900 * 1e22 + 150 * 1e22 * (time - _LockTime - intervalTime*3)/intervalTime;
-        }else if(time >=_LockTime + intervalTime*2){
-            return 700 * 1e22 + 200 * 1e22 * (time - _LockTime - intervalTime*2)/intervalTime;
-        }else if(time >=_LockTime + intervalTime){
-            return 400* 1e22 + 300 * 1e22 * (time - _LockTime - intervalTime)/intervalTime;
-        }else if(time >=_LockTime){
-            return 400 * 1e22 * (time - _LockTime)/intervalTime;
+        }else if(time >= intervalTime*4){
+            return 1050 * 1e22 + 100 * 1e22 * (time - intervalTime*4)/intervalTime;
+        }else if(time >= intervalTime*3){
+            return 900 * 1e22 + 150 * 1e22 * (time - intervalTime*3)/intervalTime;
+        }else if(time >= intervalTime*2){
+            return 700 * 1e22 + 200 * 1e22 * (time - intervalTime*2)/intervalTime;
+        }else if(time >= intervalTime){
+            return 400* 1e22 + 300 * 1e22 * (time - intervalTime)/intervalTime;
+        }else if(time >=0){
+            return 400 * 1e22 * time /intervalTime;
         }else {
             return 0;
         }
