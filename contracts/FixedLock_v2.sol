@@ -105,7 +105,6 @@ contract FixedLock is Initializable {
 
     //new tokenomic 
     bool public isReset;    
-    uint256 public totalUnLocked;
 
     event Lock(uint256 indexed id, address indexed owner, uint256 amt);
     event Unlock(uint256 indexed id, address indexed owner, uint256 amt);
@@ -217,9 +216,7 @@ contract FixedLock is Initializable {
         }
 
         uint256 released_t = block.timestamp <= releaseEnd? block.timestamp - releaseStart : releaseEnd - releaseStart; 
-        uint256 new_released = released_t * releaseSpeed - totalUnLocked;
-        
-        return (lf.locked * new_released / totalLocked) - lf.unlocked;
+        return (lf.locked * released_t / releaseDuration) - lf.unlocked;
     }
 
     function unlock(uint256 id, uint256 amt) public notContract{
@@ -235,7 +232,6 @@ contract FixedLock is Initializable {
 
         //release
         totalLocked -= amt;
-        totalUnLocked += amt;
         lf.unlocked += amt;
         payable(msg.sender).transfer(amt);
 
