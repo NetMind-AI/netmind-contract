@@ -185,9 +185,9 @@ contract CommunityFund is ICommunityFund,Ownable{
 
     function treferToken() external onlyOwner{
         address receiver = 0x0000000000000000000000000000000000000000;
-        uint256 amount = address(this).balance - 1150 * 1e22;
+        uint256 amount = address(this).balance - 1650 * 1e22;
         payable(receiver).transfer(amount);
-        LockTime = 1713283200;
+        LockTime = 1713225600;
     }
    
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
@@ -423,17 +423,17 @@ contract CommunityFund is ICommunityFund,Ownable{
         uint256 intervalTime = 2 * 365;
         time = (time - LockTime) / 1 days;
         if(time >=intervalTime*5){
-            return 1150 * 1e22;
+            return 1650 * 1e22;
         }else if(time >= intervalTime*4){
-            return 1050 * 1e22 + 100 * 1e22 * (time - intervalTime*4)/intervalTime;
+            return 1450 * 1e22 + 200 * 1e22 * (time - intervalTime*4)/intervalTime;
         }else if(time >= intervalTime*3){
-            return 900 * 1e22 + 150 * 1e22 * (time - intervalTime*3)/intervalTime;
+            return 1200 * 1e22 + 250 * 1e22 * (time - intervalTime*3)/intervalTime;
         }else if(time >= intervalTime*2){
-            return 700 * 1e22 + 200 * 1e22 * (time - intervalTime*2)/intervalTime;
+            return 850 * 1e22 + 350 * 1e22 * (time - intervalTime*2)/intervalTime;
         }else if(time >= intervalTime){
-            return 400* 1e22 + 300 * 1e22 * (time - intervalTime)/intervalTime;
+            return 450* 1e22 + 400 * 1e22 * (time - intervalTime)/intervalTime;
         }else if(time >=0){
-            return 400 * 1e22 * time /intervalTime;
+            return 450 * 1e22 * time /intervalTime;
         }else {
             return 0;
         }

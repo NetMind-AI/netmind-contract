@@ -185,7 +185,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         address receiver = 0x0000000000000000000000000000000000000000;
         uint256 amount = address(this).balance - 1000 * 1e22;
         payable(receiver).transfer(amount);
-        LockTime = 1713283200;
+        LockTime = 1713225600;
     }
    
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
