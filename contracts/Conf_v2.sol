@@ -119,7 +119,7 @@ contract Conf is Initialize {
         uint256 phase_5 = phase_4 + 2 * 365 days;
         
         if (block.timestamp < phase_1 || block.timestamp > phase_5 + 2*365 days) return (0,0,0,0);  //out of phase range
-        else if (block.timestamp < phase_2 )return (27397_260270e12, 4109_589041e12 *2/10, 4109_589041e12 *3/10, 4109_589041e12 /2);  //phase_1
+        else if (block.timestamp < phase_2 )return (27397_260270e12, 5479_452055e12 *2/10, 5479_452055e12 *3/10, 5479_452055e12 /2);  //phase_1
         else if (block.timestamp < phase_3 )return (20547_945210e12, 4794_520548e12 *2/10, 4794_520548e12 *3/10, 4794_520548e12 /2);  //phase_2
         else if (block.timestamp < phase_4 )return (13698_630140e12, 4109_589041e12 *2/10, 4109_589041e12 *3/10, 4109_589041e12 /2);  //phase_3
         else if (block.timestamp < phase_5 )return (10273_972600e12, 4109_589041e12 *2/10, 4109_589041e12 *3/10, 4109_589041e12 /2);  //phase_4
