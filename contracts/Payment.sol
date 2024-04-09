@@ -179,13 +179,17 @@ contract Payment is Initializable, Ownable {
     }
 
     function setAgent(address _agent) public onlyOwner{
-        require(agent != address(0), "zero address");
+        require(_agent != address(0), "zero address");
         agent = _agent;
     }
 
     function setCleaner(address _cleaner) public onlyOwner{
-        require(agent != address(0), "zero address");
+        require(_cleaner != address(0), "zero address");
         cleaner = _cleaner;
+    }
+
+    function setBurnProfit(bool flag) public onlyOwner{
+        burnProfit = flag;
     }
 
     function setWhiteList(address[] calldata uers) public onlyAgent{
@@ -209,9 +213,7 @@ contract Payment is Initializable, Ownable {
         CONTRACT_DOMAIN = keccak256('Netmind Payment V1.0');
     }
 
-    function setBurnProfit(bool flag) public onlyOwner{
-        burnProfit = flag;
-    }
+  
 
     function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
