@@ -110,9 +110,9 @@ contract Conf is Initialize {
 
 
     // --- New award design --- 
-    // go live data 2024-04-16 00:00:00  1713225600
+    // go live data 2024-04-16 12:00:00  1713268800
     function awardDetals() public view returns (uint256 miner, uint256 node, uint256 lp, uint256 staking){
-        uint256 phase_1 = 1713225600;             
+        uint256 phase_1 = 1713268800;             
         uint256 phase_2 = phase_1 + 2 * 365 days;
         uint256 phase_3 = phase_2 + 2 * 365 days;
         uint256 phase_4 = phase_3 + 2 * 365 days;
@@ -140,7 +140,7 @@ contract Conf is Initialize {
     ){
         require(begin > 0, "begin not set");
         require(node_awd > 0, "node_awd not set");
-        if (block.timestamp < 1713225600){
+        if (block.timestamp < 1713268800){
                 uint256 i;
                 if (block.timestamp < begin + 10 * 365 days) i = miner_awd_1;
                 else if(block.timestamp < begin + 40 * 365 days) i = miner_awd_2;
