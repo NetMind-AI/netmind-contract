@@ -131,15 +131,17 @@ contract Payment is Initializable, Ownable {
        uint256 amount;
        uint256 worth;
        uint256 refund;
+       uint256 distributed;         //NMT
        uint256 timestamp;
-       bool disFlag;
+       //bool disFlag;
     }
 
     struct agentRecipt{
         string paycode;
         uint256 worth;
+        uint256 distributed;       //USDC
         uint256 timestamp;
-        bool disFlag;
+        //bool disFlag;
     }
   
     struct Sig {
@@ -242,11 +244,10 @@ contract Payment is Initializable, Ownable {
     function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
-        require(!R.disFlag, "already distributed");
+        require(R.amount > 0, "invalid paymentId"); 
         require(R.refund <= 0, "already refund");
-        require(R.amount > 0, "invalid paymentId");
-        require(R.amount >= amt, "invalid amt");
-        require(block.timestamp <= expir, "sign expired");
+        require(R.amount - R.distributed >= amt, "invalid amt");
+        require(block.timestamp <= expir, "sign expired"); 
       
 
         //check sign
@@ -285,7 +286,7 @@ contract Payment is Initializable, Ownable {
             require(amt > 0, "invalid amount");              
         }
         
-        require(!R.disFlag, "already distributed");
+        require(R.amount - R.distributed - R.refund >=  amt + burn, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
         
 
@@ -308,14 +309,14 @@ contract Payment is Initializable, Ownable {
         require(areElementsUnique(signAddrs), "duplicate signature");
 
         //distribute
-        R.disFlag = true;
+        R.distributed += (amt + burn);
         if (amt > 0) payable(receiver).transfer(amt);
         if (burn> 0) payable(address(0)).transfer(burn);
         emit Distribute(paymentId, receiver, amt, burn);
     }
 
     function agentDistribute(string memory paymentId, address receiver, uint256 amt, uint256 burn, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
-        //TODO dock to trade
+        //check args
         agentRecipt storage R = agentRecipts[paymentId];
         if (burnProfit) {
             require(amt == 0, "brun: expect zero amount");
@@ -325,6 +326,9 @@ contract Payment is Initializable, Ownable {
             require(_isInWhilteList(receiver), "not Whiltelist user");
             require(amt > 0, "invalid amount");              
         }
+
+        require(R.worth - R.distributed >=  amt + burn, "distribute out of range");
+        require(block.timestamp <= expir, "sign expired");
 
         //check sign
         uint256 counter;
@@ -345,7 +349,7 @@ contract Payment is Initializable, Ownable {
         require(areElementsUnique(signAddrs), "duplicate signature");
 
         //distribute
-        R.disFlag = true;
+        R.distributed += (amt + burn);
         require(ICleaner(cleaner).distribute(receiver, amt, burn),"cleaner feild");
 
         emit Distribute(paymentId, receiver, amt, burn);
