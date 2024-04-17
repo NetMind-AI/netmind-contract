@@ -416,7 +416,7 @@ contract StrategicFund is IStrategicFund,Ownable{
         }else if(time >= year/2){
             return 300* 1e22 + 450 * 1e22 * (time - year/2)/(5 * year - year/2);
         }else if(time >= 0){
-            return 450 * 1e22 * time/(year/2);
+            return 300 * 1e22 * time/(year/2);
         }else {
             return 0;
         }

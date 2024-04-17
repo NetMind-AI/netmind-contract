@@ -183,12 +183,6 @@ contract CommunityFund is ICommunityFund,Ownable{
         emit UpdateVotingPeriod(_votingPeriod);
     }
 
-    function treferToken(address receiver) external onlyOwner{
-        uint256 amount = address(this).balance - 1650 * 1e22;
-        payable(receiver).transfer(amount);
-        LockTime = 1713225600;
-    }
-   
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         _addNodeAddr(_nodeAddrs);
     }
