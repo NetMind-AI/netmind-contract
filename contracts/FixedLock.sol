@@ -1,6 +1,50 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0 ;
 
+library StorageSlot {
+    struct AddressSlot {
+        address value;
+    }
+
+    struct BooleanSlot {
+        bool value;
+    }
+
+    struct Bytes32Slot {
+        bytes32 value;
+    }
+
+    struct Uint256Slot {
+        uint256 value;
+    }
+
+    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+        assembly {
+            r.slot := slot
+        }
+    }
+
+    function getBooleanSlot(bytes32 slot) internal pure returns (BooleanSlot storage r) {
+        assembly {
+            r.slot := slot
+        }
+    }
+
+
+    function getBytes32Slot(bytes32 slot) internal pure returns (Bytes32Slot storage r) {
+        assembly {
+            r.slot := slot
+        }
+    }
+
+
+    function getUint256Slot(bytes32 slot) internal pure returns (Uint256Slot storage r) {
+        assembly {
+            r.slot := slot
+        }
+    }
+}
+
 abstract contract Initializable {
     /**
      * @dev Indicates that the contract has been initialized.
@@ -37,22 +81,19 @@ abstract contract Initializable {
 }
 
 
-
 contract FixedLock is Initializable {
     uint256 public startTime;
     uint256 public endTime;
-    uint256 public deadLockDuration;
-    uint256 public releaseTimes;
-    uint256 public releasePeriod;
+    uint256 public releaseStart;      //2026-04-16 00:00:00
+    uint256 public releaseEnd;        //2030-04-16 00:00:00    
+    uint256 public releaseDuration;   
     uint256 public totalLocked;
 
     uint256 public rewardPropotion;
     uint256 public rewardDelay;
-
-   
     struct LockInfo{
         address owner;
-        uint256 locked;   
+        uint256 locked;                
         uint256 lockTime;                          
         uint256 unlocked;
         uint256 rewardsEarned;
@@ -62,12 +103,20 @@ contract FixedLock is Initializable {
     mapping(uint256 => LockInfo) public lockInfo;   //lockId  => lockInfo
     mapping(address => uint256[]) private locks;     //owner  => lockId[]
 
+    //new tokenomic 
+    bool public isReset;    
+
     event Lock(uint256 indexed id, address indexed owner, uint256 amt);
     event Unlock(uint256 indexed id, address indexed owner, uint256 amt);
     event ClaimReward(uint256 indexed id, address indexed owner, uint256 amt);
 
     modifier notContract() {
         require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner(), "only owner allowed");
         _;
     }
 
@@ -82,6 +131,9 @@ contract FixedLock is Initializable {
     constructor(){_disableInitializers();}
     
     function init(uint256 _endTime, uint256 _lockDuration, uint256 _rewardPropotion, uint256 _rewardDelay, bool _isMainNet) public initializer{
+        //already initialized
+        
+        /* 
         require(endTime > block.timestamp,"invalid time");
         startTime = block.timestamp;
         endTime = _endTime;
@@ -89,10 +141,17 @@ contract FixedLock is Initializable {
         releasePeriod = _isMainNet? 365 days: 1 minutes;
 
         deadLockDuration = _lockDuration;
-        rewardPropotion = _rewardPropotion;
+        rewardPropotion = _rewardPropotion; 
         rewardDelay = _rewardDelay;
+        */
     }
 
+    function owner() public view returns(address){
+        //EIP1967 Admin_solt: keccak-256 hash of "eip1967.proxy.admin" subtracted by 1
+        bytes32 _ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+        return StorageSlot.getAddressSlot(_ADMIN_SLOT).value;
+    }
+    
     function getLocks(address guy) public view returns(uint256[] memory){
         return locks[guy];
     }
@@ -122,23 +181,14 @@ contract FixedLock is Initializable {
         return lockId;
     }
 
-    function unlockable(uint256 id) public view returns (uint256){
+    function released(uint256 id) public view returns (uint256){
         LockInfo memory lf = lockInfo[id];
-        uint256 locked_t = block.timestamp - lf.lockTime;
-
-        if (lf.locked == 0 || locked_t < deadLockDuration || lf.locked == lf.unlocked){
+        if (lf.locked == 0 || block.timestamp < releaseStart || lf.locked == lf.unlocked){
             return 0;
-        }else {
-            uint256 _releasedLocked = locked_t - deadLockDuration;
-            uint256 _releasedTimes;
-            for (uint8 i=0; i< releaseTimes; i++){
-                if (_releasedLocked > i * releasePeriod) _releasedTimes++;
-            }
-
-            //released
-            uint256 released = lf.locked * _releasedTimes / releaseTimes;
-            return released - lf.unlocked;
         }
+
+        uint256 released_t = block.timestamp <= releaseEnd? block.timestamp - releaseStart : releaseEnd - releaseStart; 
+        return (lf.locked * released_t / releaseDuration) - lf.unlocked;
     }
 
     function unlock(uint256 id, uint256 amt) public notContract{
@@ -146,11 +196,11 @@ contract FixedLock is Initializable {
         LockInfo storage lf = lockInfo[id];
         require(lf.locked > 0, "lockId unexsit");
         require(lf.owner == msg.sender, "only owner can call");
-        require(block.timestamp > lf.lockTime + deadLockDuration, "deadlocking");
+        require(amt > 0, "amt can not be zero");
 
         //unlockable
-        uint256 _unlockable =  unlockable(id);
-        require(amt <= _unlockable && _unlockable <= lf.locked, "out of unlockable");
+        uint256 _released =  released(id);
+        require(amt <= _released && _released <= lf.locked, "out of unlockable");
 
         //release
         totalLocked -= amt;
