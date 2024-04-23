@@ -124,8 +124,9 @@ contract Payment is Initializable, Ownable {
     address public cleaner;
     address[] internal whiteList;
     mapping(string=>agentRecipt) public agentRecipts;
- 
 
+    address public feeTo;
+ 
     struct recipt{
        address payer;
        uint256 amount;
@@ -133,7 +134,6 @@ contract Payment is Initializable, Ownable {
        uint256 refund;
        uint256 distributed;         //NMT
        uint256 timestamp;
-       //bool disFlag;
     }
 
     struct agentRecipt{
@@ -141,7 +141,6 @@ contract Payment is Initializable, Ownable {
         uint256 worth;
         uint256 distributed;       //USDC
         uint256 timestamp;
-        //bool disFlag;
     }
   
     struct Sig {
@@ -190,8 +189,9 @@ contract Payment is Initializable, Ownable {
         cleaner = _cleaner;
     }
 
-    function setBurnProfit(bool flag) public onlyOwner{
-        burnProfit = flag;
+    function setFeeTo(address _feeTo) public onlyOwner{
+        feeTo = _feeTo;
+        burnProfit = _feeTo== address(0);
     }
 
     function setWhiteList(address[] calldata uers) public onlyAgent{
@@ -274,19 +274,17 @@ contract Payment is Initializable, Ownable {
         emit Refund(paymentId, R.payer, amt);
     }
 
-    function distribute(string memory paymentId, address receiver, uint256 amt, uint256 burn, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+    function distribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
-        if (burnProfit) {
-            require(amt == 0, "brun: expect zero amount");
-            require(receiver == address(0), "burn: expect zero address");
-        } else {
-            require(receiver != address(0), "zero address"); 
-            require(_isInWhilteList(receiver), "not Whiltelist user");
-            require(amt > 0, "invalid amount");              
+        require(R.amount > 0, "paymentId not find");
+
+        require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
+        if(gpu_fee > 0){
+            require(_isInWhilteList(gpu_provider), "not Whiltelist user");
         }
-        
-        require(R.amount - R.distributed - R.refund >=  amt + burn, "distribute out of range");
+
+        require(R.amount - R.distributed - R.refund >=  gpu_fee + platform_fee, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
         
 
@@ -295,7 +293,7 @@ contract Payment is Initializable, Ownable {
         uint256 len = vs.length;
         require(len*2 == rs.length, "Signature parameter length mismatch");
 
-        bytes32 digest = getDigest(paymentId, receiver, amt, burn, expir);
+        bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, platform_fee, expir);
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
             (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
@@ -309,25 +307,23 @@ contract Payment is Initializable, Ownable {
         require(areElementsUnique(signAddrs), "duplicate signature");
 
         //distribute
-        R.distributed += (amt + burn);
-        if (amt > 0) payable(receiver).transfer(amt);
-        if (burn> 0) payable(address(0)).transfer(burn);
-        emit Distribute(paymentId, receiver, amt, burn);
+        R.distributed += (gpu_fee + platform_fee);
+        if (gpu_fee > 0) payable(gpu_provider).transfer(gpu_fee);
+        if (platform_fee > 0) payable(feeTo).transfer(platform_fee);
+        emit Distribute(paymentId, gpu_provider, gpu_fee, platform_fee);
     }
 
-    function agentDistribute(string memory paymentId, address receiver, uint256 amt, uint256 burn, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+    function agentDistribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         agentRecipt storage R = agentRecipts[paymentId];
-        if (burnProfit) {
-            require(amt == 0, "brun: expect zero amount");
-            require(receiver == address(0), "burn: expect zero address");
-        } else {
-            require(receiver != address(0), "zero address"); 
-            require(_isInWhilteList(receiver), "not Whiltelist user");
-            require(amt > 0, "invalid amount");              
+        require(R.worth > 0, "paymentId not find");
+        
+        require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
+        if(gpu_fee > 0){
+            require(_isInWhilteList(gpu_provider), "not Whiltelist user");
         }
 
-        require(R.worth - R.distributed >=  amt + burn, "distribute out of range");
+        require(R.worth - R.distributed >=  gpu_fee + platform_fee, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
 
         //check sign
@@ -335,7 +331,7 @@ contract Payment is Initializable, Ownable {
         uint256 len = vs.length;
         require(len*2 == rs.length, "Signature parameter length mismatch");
 
-        bytes32 digest = getDigest(paymentId, receiver, amt, burn, expir);
+        bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, platform_fee, expir);
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
             (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
@@ -349,12 +345,11 @@ contract Payment is Initializable, Ownable {
         require(areElementsUnique(signAddrs), "duplicate signature");
 
         //distribute
-        R.distributed += (amt + burn);
-        require(ICleaner(cleaner).distribute(receiver, amt, burn),"cleaner feild");
+        R.distributed += (gpu_fee + platform_fee);
+        require(ICleaner(cleaner).distribute(gpu_provider, gpu_fee, platform_fee),"cleaner feild");
 
-        emit Distribute(paymentId, receiver, amt, burn);
+        emit Distribute(paymentId, gpu_provider, gpu_fee, platform_fee);
     }
-   
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
         for(uint i = 0; i < arr.length - 1; i++) {
