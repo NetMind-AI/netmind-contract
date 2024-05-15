@@ -36,9 +36,76 @@ abstract contract Initializable {
     }
 }
 
-contract FiatoSettle is Initializable{
+contract Ownable is Initializable{
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    function __Ownable_init_unchained() internal initializer {
+        address msgSender = msg.sender;
+        _owner = msgSender;
+        emit OwnershipTransferred(address(0), msgSender);
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Returns true if the caller is the current owner.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
+contract FiatoSettle is Initializable, Ownable{
     bool private reentrancyLock;
     address public payment;
+    address public burnAddr;
     event Distribute(address receiver, uint256 amount, uint256 burn);
     
     modifier nonReentrant() {
@@ -51,6 +118,7 @@ contract FiatoSettle is Initializable{
     constructor(){_disableInitializers();}
 
     function init(address _payment) external initializer{
+        __Ownable_init_unchained();
         __FiatoSettle_init_unchained(_payment);
     }
 
@@ -58,11 +126,15 @@ contract FiatoSettle is Initializable{
         payment = _payment;
     }
     
+    function setBurnAddr(address _burnAddr) external onlyOwner{
+        burnAddr = _burnAddr;
+    }
+
     function distribute(address receiver, uint256 amount, uint256 burn) external nonReentrant returns(bool){
         require(msg.sender == payment, "payment error");
         require(address(this).balance >= amount + burn, "payment error");
         if (amount > 0) payable(receiver).transfer(amount);
-        if (burn> 0) payable(address(0)).transfer(burn);
+        if (burn> 0) payable(burnAddr).transfer(burn);
         emit Distribute(receiver, amount, burn);
         return true;
     }
