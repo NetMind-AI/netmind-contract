@@ -126,21 +126,21 @@ contract Payment is Initializable, Ownable {
     mapping(string=>agentRecipt) public agentRecipts;
 
     address public feeTo;
- 
+
     struct recipt{
        address payer;
        uint256 amount;
        uint256 worth;
        uint256 refund;
-       uint256 distributed;         //NMT
        uint256 timestamp;
+       uint256 distributed;         //NMT
     }
 
     struct agentRecipt{
         string paycode;
         uint256 worth;
-        uint256 distributed;       //USDC
         uint256 timestamp;
+        uint256 distributed;       //USDC
     }
   
     struct Sig {
@@ -279,6 +279,10 @@ contract Payment is Initializable, Ownable {
         recipt storage R = recipts[paymentId];
         require(R.amount > 0, "paymentId not find");
 
+        //compatible with previous version onece distribute
+        require(R.distributed != 1, "already distribute"); 
+        require(gpu_fee + platform_fee != 1, "invaild distribute amount");
+        
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
         if(gpu_fee > 0){
             require(_isInWhilteList(gpu_provider), "not Whiltelist user");
@@ -313,10 +317,14 @@ contract Payment is Initializable, Ownable {
         emit Distribute(paymentId, gpu_provider, gpu_fee, platform_fee);
     }
 
-    function agentDistribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+    function agentDistribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         agentRecipt storage R = agentRecipts[paymentId];
         require(R.worth > 0, "paymentId not find");
+
+        //compatible with previous version onece distribute
+        require(R.distributed != 1, "already distribute"); 
+        require(gpu_fee + platform_fee != 1, "invaild distribute amount");
         
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
         if(gpu_fee > 0){
@@ -326,27 +334,29 @@ contract Payment is Initializable, Ownable {
         require(R.worth - R.distributed >=  gpu_fee + platform_fee, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
 
-        //check sign
-        uint256 counter;
-        uint256 len = vs.length;
-        require(len*2 == rs.length, "Signature parameter length mismatch");
+        //check sign 
+        {//stack too deep, use a code block to fix this issue
+            uint256 counter;
+            uint256 len = vs.length;
+            require(len*2 == rs.length, "Signature parameter length mismatch");
 
-        bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, platform_fee, expir);
-        address[] memory signAddrs = new address[](len);
-        for (uint256 i = 0; i < len; i++) {
-            (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
-            signAddrs[i] = signAddr;
-            if (result){
-                counter++;
+            bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir);
+            address[] memory signAddrs = new address[](len);
+            for (uint256 i = 0; i < len; i++) {
+                (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
+                signAddrs[i] = signAddr;
+                if (result){
+                    counter++;
+                }
             }
-        }
 
-        require(counter >= SigNum, "lack of signature");
-        require(areElementsUnique(signAddrs), "duplicate signature");
+            require(counter >= SigNum, "lack of signature");
+            require(areElementsUnique(signAddrs), "duplicate signature");
+        }
 
         //distribute
         R.distributed += (gpu_fee + platform_fee);
-        require(ICleaner(cleaner).distribute(gpu_provider, gpu_fee, platform_fee),"cleaner feild");
+        require(ICleaner(cleaner).distribute(gpu_provider, gpu_nmt, platform_nmt), "cleaner feild");
 
         emit Distribute(paymentId, gpu_provider, gpu_fee, platform_fee);
     }
@@ -372,6 +382,7 @@ contract Payment is Initializable, Ownable {
         return(isActs, signer); 
     }
     
+    //refund
     function getDigest(string memory paymentId, uint256 amt, uint256 expir) internal view returns(bytes32 digest){
         digest = keccak256(
             abi.encodePacked(
@@ -381,12 +392,23 @@ contract Payment is Initializable, Ownable {
         );
     }
 
-    function getDigest(string memory paymentId, address reciver, uint256 amt, uint256 burn, uint256 expir) internal view returns(bytes32 digest){
+    //distribute
+    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir) internal view returns(bytes32 digest){
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
                 DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(paymentId, reciver, amt, burn, expir)))
+                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, platform_fee, expir)))
+        );
+    }
+
+    //agentDistribute
+    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir) internal view returns(bytes32 digest){
+        digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee,platform_nmt, expir)))
         );
     }
 
