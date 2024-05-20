@@ -425,6 +425,12 @@ contract CommunityFund is ICommunityFund,Ownable{
             return 850 * 1e22 + 350 * 1e22 * (time - intervalTime*2)/intervalTime;
         }else if(time >= intervalTime){
             return 450* 1e22 + 400 * 1e22 * (time - intervalTime)/intervalTime;
+        }else if(time >=182+34){
+            return 450 * 1e22 * (time - 182) / (intervalTime-182);
+        }else if(time >=182){
+            return 450 * 1e22 * 34 /intervalTime + (time - 182)*(450 * 1e22 / uint256(548) -  450 * 1e22 / uint256(730));
+        }else if(time >=34){
+            return 450 * 1e22 * 34 /intervalTime;
         }else if(time >=0){
             return 450 * 1e22 * time /intervalTime;
         }else {
