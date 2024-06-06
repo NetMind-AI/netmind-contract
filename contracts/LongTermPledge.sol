@@ -125,6 +125,7 @@ contract LongTermPledge is Ownable{
     event StakeToken(uint256 indexed _stakeIndex, address _userAddr, address _nodeAddr, uint256 _amount, uint256 _time,  uint256 _lockTime, address _token);
     event CancleStakeToken(uint256 indexed _stakeIndex, address indexed _userAddr, address _nodeAddr, uint256 _time);
     event UpdateLockPeriod(uint256 time);
+    event UpdateStake(uint256 indexed _stakeIndex, uint256 _lockTime);
     
 
     struct StakeTokenMsg {
@@ -162,7 +163,7 @@ contract LongTermPledge is Ownable{
         emit UpdateLockPeriod(_lockPeriod);
     }
     
-    function stake(address _nodeAddr, address _token, uint256 _amount) payable external nonReentrant(){
+    function stake(address _nodeAddr, address _token, uint256 _amount, bool _type) payable external nonReentrant(){
         address _sender = msg.sender;
         _amount = msg.value;
         require(_token == address(0), "token error");
@@ -175,7 +176,10 @@ contract LongTermPledge is Ownable{
         _stakeAmount[0] = _nodeStakeNum;
         pledgeContract.upadeNodesStake(_addrArray, _stakeAmount, block.timestamp+10, "Netmind");
         uint256 _stakeTokenNum = ++stakeTokenNum;
-        uint256 _lockTime = block.timestamp + lockPeriod;
+        uint256 _lockTime=0;
+        if(!_type){
+            _lockTime = block.timestamp + lockPeriod;
+        }
         stakeTokenMsg[_stakeTokenNum] = StakeTokenMsg(_sender, _nodeAddr, block.timestamp, _lockTime, 0, _amount, _token);
         stakeList[_sender].push(_stakeTokenNum);
         emit StakeToken(_stakeTokenNum, _sender, _nodeAddr, _amount, block.timestamp, _lockTime,_token);
@@ -188,7 +192,7 @@ contract LongTermPledge is Ownable{
             if (_stakeTokenMark > 0){
                 StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_stakeTokenMark];
                 require(_stakeTokenMsg.userAddr == _sender, "sender error");
-                require(_stakeTokenMsg.lockTime < block.timestamp, "lockTime error");
+                require(_stakeTokenMsg.lockTime != 0 && _stakeTokenMsg.lockTime < block.timestamp, "lockTime error");
                 require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
                 _stakeTokenMsg.end = block.timestamp;
                 payable(_stakeTokenMsg.userAddr).transfer(_stakeTokenMsg.tokenAmount);
@@ -203,8 +207,38 @@ contract LongTermPledge is Ownable{
         }
     }
     
+    function updateStake(uint256 _index, bool _type) external nonReentrant(){
+        StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_index];
+        require(_stakeTokenMsg.userAddr == msg.sender, "sender error");
+        require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
+        if(_stakeTokenMsg.lockTime==0){
+            _stakeTokenMsg.lockTime = _stakeTokenMsg.start + ((block.timestamp - _stakeTokenMsg.start)/lockPeriod +1) * lockPeriod;
+        }else {
+            if(_stakeTokenMsg.lockTime > block.timestamp){
+                _stakeTokenMsg.lockTime = 0;
+            }else {
+                _stakeTokenMsg.start = block.timestamp;
+                if(_type){
+                    _stakeTokenMsg.lockTime = 0;
+                }else {
+                    _stakeTokenMsg.lockTime = block.timestamp + lockPeriod;
+                }
+            }
+        }
+        emit UpdateStake(_index, _stakeTokenMsg.lockTime);
+    }
+
     function getStakeList(address addr) public view returns(uint256[] memory){
         return stakeList[addr];
+    }
+
+    function getStakeLockTime(uint256 _index) public view returns(uint256){
+        StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_index];
+        uint256 lockTime = _stakeTokenMsg.lockTime;
+        if(_stakeTokenMsg.lockTime==0){
+            lockTime = _stakeTokenMsg.start + ((block.timestamp - _stakeTokenMsg.start)/lockPeriod +1) * lockPeriod;
+        }
+        return lockTime;
     }
 
 
