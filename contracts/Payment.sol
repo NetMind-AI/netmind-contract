@@ -126,6 +126,7 @@ contract Payment is Initializable, Ownable {
     mapping(string=>agentRecipt) public agentRecipts;
 
     address public feeTo;
+    mapping(string=>uint256) public nonce;
 
     struct recipt{
        address payer;
@@ -393,22 +394,24 @@ contract Payment is Initializable, Ownable {
     }
 
     //distribute
-    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir) internal view returns(bytes32 digest){
+    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir) internal returns(bytes32 digest){
+        uint256 _nonce = nonce[paymentId]++;
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
                 DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, platform_fee, expir)))
+                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, platform_fee, expir, _nonce)))
         );
     }
 
     //agentDistribute
-    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir) internal view returns(bytes32 digest){
+    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir) internal returns(bytes32 digest){
+        uint256 _nonce = nonce[paymentId]++;
         digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
                 DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee,platform_nmt, expir)))
+                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee,platform_nmt, expir, _nonce)))
         );
     }
 
