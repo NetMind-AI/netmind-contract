@@ -147,7 +147,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         uint256[] amounts;
         bool[] proposalStas;
         uint256[] expires;
-        address[] allProposers;
     }
 
     modifier nonReentrant() {
@@ -282,7 +281,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             uint256[] memory, 
             bool[] memory, 
             uint256[] memory,
-            address[] memory, 
             uint256[] memory,
             uint256 
         )
@@ -303,7 +301,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
                 queryProposalMsgData.amounts,
                 queryProposalMsgData.proposalStas,
                 queryProposalMsgData.expires,
-                queryProposalMsgData.allProposers,
                 indexs,
                 _num);
 
@@ -384,14 +381,12 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         )
     {   
         uint256 len = _proposalIds.length;
-        uint256 _nodeNum = nodeNum;
         queryProposalMsgData.proposalSponsors = new address[](len);
         queryProposalMsgData.contents = new string[](len);
         queryProposalMsgData.targetAddrs = new address[](len);
         queryProposalMsgData.amounts = new uint256[](len);
         queryProposalMsgData.proposalStas = new bool[](len);
         queryProposalMsgData.expires = new uint256[](len);
-        queryProposalMsgData.allProposers = new address[](len*_nodeNum);
         ProposalMsg storage _proposalMsg;
         for (uint256 i = 0; i < len; i++) {
             _proposalMsg = proposalMsg[_proposalIds[i]];
@@ -401,9 +396,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             queryProposalMsgData.amounts[i] = _proposalMsg.amount;
             queryProposalMsgData.proposalStas[i] =  _proposalMsg.proposalSta;
             queryProposalMsgData.expires[i] = _proposalMsg.expire;
-            for (uint256 j = 0; j < _proposalMsg.allProposers.length; j++) {
-                queryProposalMsgData.allProposers[i * _nodeNum +j] = _proposalMsg.allProposers[j];
-            }
         }
     }
 
@@ -433,6 +425,16 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             nodes[i-1] = nodeIndexAddr[i];
         }
         return nodes;
+    }
+
+    function queryAllProposers(uint256 _proposalId) external view returns(address[] memory){
+        ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
+        uint256 len = _proposalMsg.allProposers.length;
+        address[] memory allProposers = new address[](len);
+        for (uint256 i = 0; i < len; i++) {
+            allProposers[i] = _proposalMsg.allProposers[i];
+        }
+        return allProposers;
     }
 
 }
