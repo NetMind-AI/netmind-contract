@@ -199,6 +199,7 @@ contract AccountManage is Ownable{
     {
        conf = _conf;
        CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
+       signNum = 2;
     }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
