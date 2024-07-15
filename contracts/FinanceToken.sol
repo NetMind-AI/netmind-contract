@@ -128,14 +128,17 @@ contract FinanceToken is Initializable{
         FinanceMsg storage finance = financeMsg[_financingId];
         require(finance.endTime >= block.timestamp, "time error");
         require(finance.paymentToken == address(0), "token error");
-        payable(finance.tokenReceiveAddress).transfer(msg.value);
         uint256 _purchaseNMTQuantity = msg.value * finance.paymentPrice / 10**18;
+        require(_purchaseNMTQuantity > 0, "purchaseNMTQuantity error");
+        uint256 useAmount = _purchaseNMTQuantity * 10**18 / finance.paymentPrice;
+        payable(finance.tokenReceiveAddress).transfer(useAmount);
+        payable(_sender).transfer(msg.value - useAmount);
         uint256 _purchaseNumber = ++purchaseNumber;
         userMsg[_purchaseNumber] = UserMsg(_sender, finance.endTime, finance.unlockIntervalDays, finance.unlockPercentage, 0, _purchaseNMTQuantity);
         userInfo[_sender].push(_purchaseNumber);
         finance.soldNMTQuantity += _purchaseNMTQuantity;
         require(finance.soldNMTQuantity <= finance.sellNMTQuantity, "Limit Exceeded");
-        emit PurchaseNMTWithToken(_purchaseNumber, _sender, _purchaseNMTQuantity, address(0), msg.value);
+        emit PurchaseNMTWithToken(_purchaseNumber, _sender, _purchaseNMTQuantity, address(0), useAmount);
     }
 
     function purchaseNMTWithToken(uint256 _financingId, address _paymentToken, uint256 _paymentAmount) external nonReentrant(){
@@ -143,15 +146,18 @@ contract FinanceToken is Initializable{
         FinanceMsg storage finance = financeMsg[_financingId];
         require(finance.endTime >= block.timestamp, "time error");
         require(_paymentToken != address(0) && finance.paymentToken == _paymentToken, "token error");
-        require(IERC20(_paymentToken).transferFrom(_sender,finance.tokenReceiveAddress,_paymentAmount), "Token transfer failed");
         uint256 decimals = IERC20(_paymentToken).decimals();
         uint256 _purchaseNMTQuantity = _paymentAmount * finance.paymentPrice / 10**decimals;
+        require(_purchaseNMTQuantity > 0, "purchaseNMTQuantity error");
+        uint256 useAmount = _purchaseNMTQuantity * 10**decimals / finance.paymentPrice;
+        require(IERC20(_paymentToken).transferFrom(_sender,finance.tokenReceiveAddress,useAmount), "Token transfer failed");
+        IERC20(nmtToken).transfer(_sender,_paymentAmount - useAmount);
         uint256 _purchaseNumber = ++purchaseNumber;
         userMsg[_purchaseNumber] = UserMsg(_sender, finance.endTime, finance.unlockIntervalDays, finance.unlockPercentage, 0, _purchaseNMTQuantity);
         userInfo[_sender].push(_purchaseNumber);
         finance.soldNMTQuantity += _purchaseNMTQuantity;
         require(finance.soldNMTQuantity <= finance.sellNMTQuantity, "Limit Exceeded");
-        emit PurchaseNMTWithToken(_purchaseNumber, _sender, _purchaseNMTQuantity, _paymentToken, _paymentAmount);
+        emit PurchaseNMTWithToken(_purchaseNumber, _sender, _purchaseNMTQuantity, _paymentToken, useAmount);
     }
 
     function withdrawNMTToken(uint256[] memory _purchaseNumbers) external nonReentrant(){
