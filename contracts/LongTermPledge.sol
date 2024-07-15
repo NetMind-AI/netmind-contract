@@ -207,23 +207,29 @@ contract LongTermPledge is Ownable{
         }
     }
     
+    function switchStake(uint256 _index, bool _type) external nonReentrant(){
+        StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_index];
+        require(_stakeTokenMsg.userAddr == msg.sender, "sender error");
+        require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
+        require(_stakeTokenMsg.lockTime ==0 || _stakeTokenMsg.lockTime > block.timestamp);
+        if(_type){
+            _stakeTokenMsg.lockTime = 0;
+        }else {
+            _stakeTokenMsg.lockTime = _stakeTokenMsg.start + ((block.timestamp - _stakeTokenMsg.start)/lockPeriod +1) * lockPeriod;   
+        }
+        emit UpdateStake(_index, _stakeTokenMsg.lockTime);
+    }
+
     function updateStake(uint256 _index, bool _type) external nonReentrant(){
         StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_index];
         require(_stakeTokenMsg.userAddr == msg.sender, "sender error");
         require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
-        if(_stakeTokenMsg.lockTime==0){
-            _stakeTokenMsg.lockTime = _stakeTokenMsg.start + ((block.timestamp - _stakeTokenMsg.start)/lockPeriod +1) * lockPeriod;
+        require(_stakeTokenMsg.lockTime !=0 && _stakeTokenMsg.lockTime <= block.timestamp);
+        _stakeTokenMsg.start = block.timestamp;
+        if(_type){
+            _stakeTokenMsg.lockTime = 0;
         }else {
-            if(_stakeTokenMsg.lockTime > block.timestamp){
-                _stakeTokenMsg.lockTime = 0;
-            }else {
-                _stakeTokenMsg.start = block.timestamp;
-                if(_type){
-                    _stakeTokenMsg.lockTime = 0;
-                }else {
-                    _stakeTokenMsg.lockTime = block.timestamp + lockPeriod;
-                }
-            }
+            _stakeTokenMsg.lockTime = block.timestamp + lockPeriod;
         }
         emit UpdateStake(_index, _stakeTokenMsg.lockTime);
     }

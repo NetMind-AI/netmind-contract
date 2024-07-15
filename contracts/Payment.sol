@@ -126,6 +126,7 @@ contract Payment is Initializable, Ownable {
     mapping(string=>agentRecipt) public agentRecipts;
 
     address public feeTo;
+    mapping(bytes32=>bool) public digestSta;
 
     struct recipt{
        address payer;
@@ -254,8 +255,9 @@ contract Payment is Initializable, Ownable {
         uint256 counter;
         uint256 len = vs.length;
         require(len*2 == rs.length, "Signature parameter length mismatch");
-
         bytes32 digest = getDigest(paymentId, amt, expir);
+        require(!digestSta[digest], "digest error"); 
+        digestSta[digest] = true;
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
             (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
@@ -298,6 +300,8 @@ contract Payment is Initializable, Ownable {
         require(len*2 == rs.length, "Signature parameter length mismatch");
 
         bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, platform_fee, expir);
+        require(!digestSta[digest], "digest error"); 
+        digestSta[digest] = true;
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
             (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
@@ -341,6 +345,8 @@ contract Payment is Initializable, Ownable {
             require(len*2 == rs.length, "Signature parameter length mismatch");
 
             bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir);
+            require(!digestSta[digest], "digest error"); 
+            digestSta[digest] = true;
             address[] memory signAddrs = new address[](len);
             for (uint256 i = 0; i < len; i++) {
                 (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
