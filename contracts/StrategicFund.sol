@@ -176,6 +176,11 @@ contract StrategicFund is IStrategicFund,Ownable{
         emit UpdateVotingPeriod(_votingPeriod);
     }
 
+    function withdraw(address to) external onlyOwner{
+        uint256 amount = address(this).balance + withdrawSum - 750 * 1e22;
+        payable(to).transfer(amount);
+    }
+
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         _addNodeAddr(_nodeAddrs);
     }

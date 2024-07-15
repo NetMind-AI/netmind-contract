@@ -177,6 +177,11 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         emit UpdateVotingPeriod(_votingPeriod);
     }
 
+    function withdraw(address to) external onlyOwner{
+        uint256 amount = address(this).balance + withdrawSum - 1000 * 1e22;
+        payable(to).transfer(amount);
+    }
+
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         _addNodeAddr(_nodeAddrs);
     }

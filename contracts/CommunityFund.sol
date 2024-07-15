@@ -179,6 +179,11 @@ contract CommunityFund is ICommunityFund,Ownable{
         emit UpdateVotingPeriod(_votingPeriod);
     }
 
+    function withdrawToken(address to) external onlyOwner{
+        uint256 amount = address(this).balance + withdraw - 1650 * 1e22;
+        payable(to).transfer(amount);
+    }
+
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
         _addNodeAddr(_nodeAddrs);
     }
