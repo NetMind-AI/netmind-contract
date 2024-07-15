@@ -192,5 +192,9 @@ contract Purchase is Initializable,Ownable{
         return amounts[1]; 
     }
 
+    function withdraw(address to) external onlyOwner(){
+        IERC20(nmtToken).transfer(to, IERC20(nmtToken).balanceOf(address(this)));
+    }
+
 }
 
