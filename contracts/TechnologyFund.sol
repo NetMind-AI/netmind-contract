@@ -171,10 +171,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         reentrancyLock = false;
     }
 
-    fallback() external{
-
-    }
-
     function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
     }
@@ -238,7 +234,9 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         address _sender = msg.sender;
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         require(nodeAddrSta[targetAddr], "The receiving address is not the node address"); 
-        _verify(amount);
+        uint256 _time = block.timestamp;
+        uint256 _allAmount = calcRelease(_time);
+        require(amount <= _allAmount - withdrawSum, "withdraw error"); 
         uint256 _proposalId = ++proposalCount;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
         _proposalMsg.proposalSponsor = _sender;
@@ -263,11 +261,12 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         _proposalMsg.voterSta[_sender] = true;
         uint256 length = _proposalMsg.allProposers.length;
         if(length> nodeNum/2 && !_proposalMsg.proposalSta){
-            _verify(_proposalMsg.amount);
+            _proposalMsg.proposalSta = true;
+            uint256 _allAmount = calcRelease(_time);
+            require(_proposalMsg.amount <= _allAmount - withdrawSum, "withdraw error"); 
+            withdrawSum = withdrawSum + _proposalMsg.amount;
             require(address(this).balance >= _proposalMsg.amount, "Insufficient balance");
             payable(_proposalMsg.targetAddr).transfer(_proposalMsg.amount);
-            _proposalMsg.proposalSta = true;
-            withdrawSum = withdrawSum + _proposalMsg.amount;
         }
         emit Vote(_sender, _proposalId);
     }
@@ -311,13 +310,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
                 indexs,
                 _num);
 
-    }
-
-    function _verify(uint256 amount) internal view{
-        uint256 _time = block.timestamp;
-        uint256 _sum = ((_time - LockTime) / 31536000 +1) * unLockNum;
-        if(_sum > 1000000000 * 10**18) _sum = 1000000000 * 10**18;
-        require(_sum >= amount + withdrawSum, "Extractable quantity exceeded"); 
     }
 
     function _votingProposalMsg(uint256 _page, uint256 _limit) internal view returns(uint256[] memory indexs, uint256 _num){
@@ -418,13 +410,26 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         }
     }
 
-    function queryUnlock() external view returns(uint256, uint256){
-        uint256 _time = block.timestamp;
-        uint256 _sum = ((_time - LockTime) / 31536000 + 1) * unLockNum;
-        if(_sum > 1000000000 * 10**18) _sum = 1000000000 * 10**18;
-        return (_sum, withdrawSum);
+    function calcRelease(uint256 time) public view returns (uint256) {
+        uint256 year = 365;
+        time = (time - LockTime) / 1 days;
+        if(time >=year * 10){
+            return 1000 * 1e22;
+        }else if(time >=year * 5){
+            return 600* 1e22 + 400 * 1e22 * (time - year * 5)/(5 * year);
+        }else if(time >= year/2){
+            return 600 * 1e22 * (time - year/2)/(5 * year - year/2);
+        }else {
+            return 0;
+        }
     }
 
+    function queryUnlock() external view returns(uint256, uint256){
+        uint256 _time = block.timestamp;
+        uint256 _allAmount = calcRelease(_time);
+        return (withdrawSum, _allAmount - withdrawSum);
+    }
+    
     function queryNodes()  external view returns(address[] memory){
         address[] memory nodes = new address[](nodeNum);
         for (uint256 i = 1; i <= nodeNum; i++) {

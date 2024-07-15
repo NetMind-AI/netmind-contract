@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0 ;
 
-interface ICommunityFund {
+interface IStrategicFund {
     function addNodeAddr(address[] calldata _nodeAddrs) external;		
     function deleteNodeAddr(address[] calldata _nodeAddrs) external;				
     function propose(address targetAddr, uint256 amount, string memory content) external;		
@@ -110,7 +110,7 @@ contract Ownable is Initializable{
     }
 }
 
-contract CommunityFund is ICommunityFund,Ownable{
+contract StrategicFund is IStrategicFund,Ownable{
     uint256 public votingPeriod;
     uint256 public proposalCount;                           
     mapping(uint256 => ProposalMsg) public proposalMsg;
@@ -119,16 +119,14 @@ contract CommunityFund is ICommunityFund,Ownable{
     mapping(uint256 => address) nodeIndexAddr;
     mapping(address => bool) public nodeAddrSta;
     bool private reentrancyLock;
+    uint256 public withdrawSum;
     uint256 public LockTime;
-    uint256 public withdraw;
 
     event AddNodeAddr(address _nodeAddr);
     event DeleteNodeAddr(address _nodeAddr);
     event Propose(address indexed proposer, uint256 proposalId, address targetAddr, uint256 amount,string content);
     event Vote(address indexed voter, uint256 proposalId);
-    event UpdateLockTime(uint256 _LockTime);
     event UpdateVotingPeriod(uint256 _votingPeriod);
-
 
     struct ProposalMsg {
         address proposalSponsor;
@@ -160,13 +158,12 @@ contract CommunityFund is ICommunityFund,Ownable{
 
     constructor(){_disableInitializers();}
 
-
     function init(address[] calldata _nodeAddrs) external initializer{
         __Ownable_init_unchained();
-        __CommunityFund_init_unchained(_nodeAddrs);
+        __StrategicFund_init_unchained(_nodeAddrs);
     }
 
-    function __CommunityFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
+    function __StrategicFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
         _addNodeAddr(_nodeAddrs);
         votingPeriod = 2 days;
         reentrancyLock = false;
@@ -174,7 +171,6 @@ contract CommunityFund is ICommunityFund,Ownable{
 
     function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
-        emit UpdateLockTime(_LockTime);
     }
    
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
@@ -238,14 +234,14 @@ contract CommunityFund is ICommunityFund,Ownable{
         require(nodeAddrSta[targetAddr], "The receiving address is not the node address"); 
         uint256 _time = block.timestamp;
         uint256 _allAmount = calcRelease(_time);
-        require(amount <= _allAmount - withdraw, "withdraw error"); 
+        require(amount <= _allAmount - withdrawSum, "withdraw error"); 
         uint256 _proposalId = ++proposalCount;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
         _proposalMsg.proposalSponsor = _sender;
         _proposalMsg.content = content;
         _proposalMsg.targetAddr = targetAddr;
         _proposalMsg.amount = amount;
-        _proposalMsg.expire = _time + votingPeriod;
+        _proposalMsg.expire = block.timestamp + votingPeriod;
         _proposalMsg.allProposers.push(_sender);
         _proposalMsg.voterSta[_sender] = true;
         emit Propose(_sender, _proposalId, targetAddr, amount, content);
@@ -265,8 +261,8 @@ contract CommunityFund is ICommunityFund,Ownable{
         if(length> nodeNum/2 && !_proposalMsg.proposalSta){
             _proposalMsg.proposalSta = true;
             uint256 _allAmount = calcRelease(_time);
-            require(_proposalMsg.amount <= _allAmount - withdraw, "withdraw error"); 
-            withdraw += _proposalMsg.amount;
+            require(_proposalMsg.amount <= _allAmount - withdrawSum, "withdraw error"); 
+            withdrawSum = withdrawSum + _proposalMsg.amount;
             require(address(this).balance >= _proposalMsg.amount, "Insufficient balance");
             payable(_proposalMsg.targetAddr).transfer(_proposalMsg.amount);
         }
@@ -413,26 +409,14 @@ contract CommunityFund is ICommunityFund,Ownable{
     }
 
     function calcRelease(uint256 time) public view returns (uint256) {
-        uint256 intervalTime = 2 * 365;
+        uint256 year = 365;
         time = (time - LockTime) / 1 days;
-        if(time >=intervalTime*5){
-            return 1650 * 1e22;
-        }else if(time >= intervalTime*4){
-            return 1450 * 1e22 + 200 * 1e22 * (time - intervalTime*4)/intervalTime;
-        }else if(time >= intervalTime*3){
-            return 1200 * 1e22 + 250 * 1e22 * (time - intervalTime*3)/intervalTime;
-        }else if(time >= intervalTime*2){
-            return 850 * 1e22 + 350 * 1e22 * (time - intervalTime*2)/intervalTime;
-        }else if(time >= intervalTime){
-            return 450* 1e22 + 400 * 1e22 * (time - intervalTime)/intervalTime;
-        }else if(time >=182+34){
-            return 450 * 1e22 * (time - 182) / (intervalTime-182);
-        }else if(time >=182){
-            return 450 * 1e22 * 34 /intervalTime + (time - 182)*(450 * 1e22 / uint256(548) -  450 * 1e22 / uint256(730));
-        }else if(time >=34){
-            return 450 * 1e22 * 34 /intervalTime;
-        }else if(time >=0){
-            return 450 * 1e22 * time /intervalTime;
+        if(time >= 5 * year){
+            return 750 * 1e22;
+        }else if(time >= year/2){
+            return 300* 1e22 + 450 * 1e22 * (time - year/2)/(5 * year - year/2);
+        }else if(time >= 0){
+            return 300 * 1e22 * time/(year/2);
         }else {
             return 0;
         }
@@ -441,7 +425,7 @@ contract CommunityFund is ICommunityFund,Ownable{
     function queryUnlock() external view returns(uint256, uint256){
         uint256 _time = block.timestamp;
         uint256 _allAmount = calcRelease(_time);
-        return (withdraw, _allAmount - withdraw);
+        return (withdrawSum, _allAmount - withdrawSum);
     }
     
     function queryNodes()  external view returns(address[] memory){
