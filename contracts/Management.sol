@@ -88,6 +88,7 @@ contract Management is IManagement{
     }
   
     function _excContractPropose(address _targetAddr, bytes memory _data) internal{
+        require(_targetAddr != address(this), "targetAddr error"); 
         require(bytesToUint(_data) != 2401778032 && bytesToUint(_data) != 822583150, "Calls to methods of proxy contracts are not allowed");
         _propose(_targetAddr, address(0), _data, 6, "excContract");
     }
