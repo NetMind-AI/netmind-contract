@@ -161,22 +161,18 @@ contract CommunityFund is ICommunityFund,Ownable{
     constructor(){_disableInitializers();}
 
 
-    function init(address[] calldata _nodeAddrs) external initializer{
+    function init(address[] calldata _nodeAddrs, uint256 _LockTime) external initializer{
         __Ownable_init_unchained();
-        __CommunityFund_init_unchained(_nodeAddrs);
+        __CommunityFund_init_unchained(_nodeAddrs, _LockTime);
     }
 
-    function __CommunityFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
+    function __CommunityFund_init_unchained(address[] calldata _nodeAddrs, uint256 _LockTime) internal initializer{
         _addNodeAddr(_nodeAddrs);
         votingPeriod = 2 days;
         reentrancyLock = false;
+        LockTime = _LockTime;
     }
 
-    function updateLockTime(uint256 _LockTime) external onlyOwner{
-        LockTime = _LockTime;
-        emit UpdateLockTime(_LockTime);
-    }
-   
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
         require(_votingPeriod <= 15 days && _votingPeriod > votingPeriod, "Parameter error");
         votingPeriod = _votingPeriod;

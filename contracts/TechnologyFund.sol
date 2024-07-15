@@ -159,22 +159,19 @@ contract TechnologyFund is ITechnologyFund,Ownable{
 
     constructor(){_disableInitializers();}
 
-    function init(address[] calldata _nodeAddrs) external initializer{
+    function init(address[] calldata _nodeAddrs, uint256 _LockTime) external initializer{
         __Ownable_init_unchained();
-        __TechnologyFund_init_unchained(_nodeAddrs);
+        __TechnologyFund_init_unchained(_nodeAddrs, _LockTime);
     }
 
-    function __TechnologyFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
+    function __TechnologyFund_init_unchained(address[] calldata _nodeAddrs, uint256 _LockTime) internal initializer{
         _addNodeAddr(_nodeAddrs);
         unLockNum = 10000000 * 10 ** 18;
         votingPeriod = 2 days;
         reentrancyLock = false;
-    }
-
-    function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
     }
-   
+
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
         require(_votingPeriod <= 15 days && _votingPeriod > votingPeriod, "Parameter error");
         votingPeriod = _votingPeriod;

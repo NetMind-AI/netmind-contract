@@ -158,18 +158,15 @@ contract StrategicFund is IStrategicFund,Ownable{
 
     constructor(){_disableInitializers();}
 
-    function init(address[] calldata _nodeAddrs) external initializer{
+    function init(address[] calldata _nodeAddrs, uint256 _LockTime) external initializer{
         __Ownable_init_unchained();
-        __StrategicFund_init_unchained(_nodeAddrs);
+        __StrategicFund_init_unchained(_nodeAddrs, _LockTime);
     }
 
-    function __StrategicFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
+    function __StrategicFund_init_unchained(address[] calldata _nodeAddrs, uint256 _LockTime) internal initializer{
         _addNodeAddr(_nodeAddrs);
         votingPeriod = 2 days;
         reentrancyLock = false;
-    }
-
-    function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
     }
    

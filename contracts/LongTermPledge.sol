@@ -159,6 +159,7 @@ contract LongTermPledge is Ownable{
     }
 
     function updateLockPeriod(uint256 _lockPeriod) external onlyOwner{
+        require(_lockPeriod <= 2* 365 days && _lockPeriod >= 30 days, "lockPeriod error");
         lockPeriod = _lockPeriod;
         emit UpdateLockPeriod(_lockPeriod);
     }

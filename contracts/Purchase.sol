@@ -164,6 +164,7 @@ contract Purchase is Initializable,Ownable{
     
     function swapToken(uint256 _amount, uint256 _minOut, string memory _orderId) external nonReentrant{
         require(msg.sender == exector, "exector error");
+        require(calculateAmountOutMin(_amount) * 9 /10 < _minOut, "minOut error");
         require(!orderId[_orderId], "orderId error");
         orderId[_orderId] = true;
         require(IERC20(usdc).balanceOf(address(this)) >= _amount, "Insufficient balance");

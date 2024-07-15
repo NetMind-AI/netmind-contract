@@ -203,6 +203,7 @@ contract AccountManage is Ownable{
     }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
+        require(_signNum > 0, "signNum error");
         signNum = _signNum;
     }
 

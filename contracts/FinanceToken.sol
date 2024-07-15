@@ -105,7 +105,9 @@ contract FinanceToken is Initializable{
         address paymentToken,
         uint256 paymentPrice
     ) external{
-        require(unlockPercentage < 100, "percentage error");
+        require(investmentPeriod < 100, "investmentPeriod error");
+        require(unlockIntervalDays <= 365 * day, "unlockIntervalDays error");
+        require(unlockPercentage < 100 && unlockPercentage > 0, "percentage error");
         require(tokenReceiveAddress != address(0), "tokenReceiveAddress error");
         require(IERC20(nmtToken).transferFrom(msg.sender, address(this),sellNMTQuantity), "Token transfer failed");
         uint256 _financingId  = ++financingId;
