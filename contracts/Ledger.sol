@@ -96,8 +96,6 @@ contract Ledger is Initializable, ILedger{
         require(_nonces.length == _tokenAddrs.length, "Number of parameters does not match"); 
         require(_tokenAddrs.length == _amounts.length , "Number of parameters does not match"); 
         require(_txHashs.length == _amounts.length , "Number of parameters does not match"); 
-        //uint256 _nodeRank = pledgeContract.queryNodeIndex(_sender);
-        //require(_nodeRank < 22 && _nodeRank > 0, "The caller is not the nodeAddr"); 
         require(conf.acts(_sender), "only accountant");
         for (uint256 i=0; i < len; i++){
              _updatLedger(_userAddrs[i],_nonces[i],_tokenAddrs[i],_amounts[i],_txHashs[i],_sender);
