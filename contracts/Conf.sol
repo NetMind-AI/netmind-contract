@@ -63,6 +63,7 @@ contract Conf is Initialize {
     //new reward opition, that will reset the reward proportion. new reward proportion: staking => 50%, liquidity => 30%, node => 20%
     uint256 private liquidity_awd; //Award of liquidity proportion => 30% [THD]
 
+    address public accountUsdExecutor;
 
     constructor(){_disableInitializers();}
     
@@ -85,6 +86,7 @@ contract Conf is Initialize {
         else if (what == "AccountManageExecutor") accountManageExecutor = dst;
         else if (what == "PriceServiceExecutor") priceServiceExecutor = dst;
         else if (what == "TrainingTaskExecutor") trainingTaskExecutor = dst;
+        else if (what == "accountUsdExecutor") accountUsdExecutor = dst;
     }
 
     function file(bytes32 what, uint256 data) public auth {
