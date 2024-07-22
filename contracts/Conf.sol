@@ -70,6 +70,7 @@ contract Conf is Initialize {
     uint256 private liquidity_awd; //Award of liquidity proportion => 30% [THD]
 
     address public accountUsdExecutor;
+    address public execDeductionExecutor;
 
     constructor(){_disableInitializers();}
     
@@ -93,6 +94,7 @@ contract Conf is Initialize {
         else if (what == "PriceServiceExecutor") priceServiceExecutor = dst;
         else if (what == "TrainingTaskExecutor") trainingTaskExecutor = dst;
         else if (what == "accountUsdExecutor") accountUsdExecutor = dst;
+        else if (what == "execDeductionExecutor") execDeductionExecutor = dst;
     }
 
     function file(bytes32 what, uint256 data) public auth {

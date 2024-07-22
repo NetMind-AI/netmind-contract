@@ -6,6 +6,7 @@ interface IConf {
     function v_settlement() external returns (uint256);
     function accountManageExecutor() external returns (address);
     function accountUsdExecutor() external returns (address);
+    function execDeductionExecutor() external returns (address);
     function Staking() external returns (address);
     function acts(address ) external view returns(bool);
 }
@@ -140,7 +141,7 @@ contract AccountManage is Ownable{
     event Freeze(string userId, uint256 value, uint256 balance, uint256 jobType);
     event ExecDebit(string userId, uint256 useValue, uint256 offsetValue, uint256 balance, uint256 jobType);
     event UpdateAccountUsd(string userId, string orderId, int256 usd, int256 usdBalance);
-    event ExecDeduction(string userId, string orderId, uint256 nmt, uint256 nmtBalance, int256 usd, int256 usdBalance);
+    event ExecDeduction(string userId, string orderId, string _msg, uint256 nmt, uint256 nmtBalance, int256 usd, int256 usdBalance);
 
     struct UserAccountMsg {
         uint256 balance;
@@ -189,6 +190,11 @@ contract AccountManage is Ownable{
 
     modifier onlyAccountUsdExecutor() {
         require(IConf(conf).accountUsdExecutor() == msg.sender, "caller is not the accountManageExecutor");
+        _;
+    }
+
+    modifier onlyExecDeductionExecutor() {
+        require(IConf(conf).execDeductionExecutor() == msg.sender, "caller is not the accountManageExecutor");
         _;
     }
 
@@ -265,7 +271,7 @@ contract AccountManage is Ownable{
         emit UpdateAccountUsd(_userId, _orderId, _usd, _userAccountMsg.usd);
     }
 
-    function execDeduction(string memory _userId, string memory _orderId, uint256 _nmt, int256 _usd) external onlyAccountUsdExecutor{
+    function execDeduction(string memory _userId, string memory _orderId, uint256 _nmt, int256 _usd, string memory _msg) external onlyExecDeductionExecutor{
         uint256 _num = userAccountById[_userId];
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(_num > 0, "The user id does not exist");
@@ -276,7 +282,7 @@ contract AccountManage is Ownable{
         require(_userAccountMsg.usd >= quota, "quota error");
         useFeeSum += _nmt;
         _userAccountMsg.balance = _userAccountMsg.balance - _nmt;
-        emit ExecDeduction(_userId, _orderId, _nmt, _userAccountMsg.balance, _usd, _userAccountMsg.usd);
+        emit ExecDeduction(_userId, _orderId, _msg, _nmt, _userAccountMsg.balance, _usd, _userAccountMsg.usd);
     }
 
     function tokenCharge() external payable{
