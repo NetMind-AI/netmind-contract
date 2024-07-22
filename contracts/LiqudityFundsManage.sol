@@ -345,6 +345,7 @@ contract LiquidityFundsManage is Ownable{
 
             //vote check
             require(!voteRecord[id][msg.sender], "already voted this proposal");
+            voteRecord[id][msg.sender] = true;
             p.assentors.push(msg.sender);
             if (p.assentors.length > threshold()) {
                   //exec proposal
