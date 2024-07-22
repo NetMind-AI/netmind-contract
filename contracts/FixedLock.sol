@@ -163,6 +163,7 @@ contract FixedLock is Initializable {
     }
 
     function lock(uint256 amt) public payable notContract returns(uint256 id){
+        require(amt > 0 , "amt error");
         amt = amt * 1e18;
         require(block.timestamp > startTime, "activit not start");
         require(block.timestamp < endTime, "activit end");

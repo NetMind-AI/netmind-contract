@@ -19,8 +19,14 @@ contract Initialize {
 contract Conf is Initialize {
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address guy) external auth { wards[guy] = 1; }
-    function deny(address guy) external auth { wards[guy] = 0; }
+    function rely(address guy) external auth { 
+        require(guy != address(0), "The address is 0 address");
+        wards[guy] = 1; 
+    }
+    function deny(address guy) external auth { 
+        require(guy != address(0), "The address is 0 address");
+        wards[guy] = 0; 
+    }
     modifier auth { require(wards[msg.sender] == 1); _; }
 
     // --- NetMind contracts ---

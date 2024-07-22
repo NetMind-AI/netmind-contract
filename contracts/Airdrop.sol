@@ -15,6 +15,8 @@ contract Airdrop {
             _;
       }
       constructor(address _nmt,address _bank) {
+            require(_nmt != address(0), "The address is 0 address");
+            require(_bank != address(0), "The address is 0 address");
             nmt = _nmt;
             bank = _bank;
             sender = msg.sender;
@@ -23,12 +25,14 @@ contract Airdrop {
       function airdrop(address[] memory users, uint256[] memory amts) public Onlysender {
             require(users.length == amts.length, "Airdrop: invalid length of users and amts");
             for (uint256 i = 0; i < users.length; i++){
+                  require(users[i] != address(0), "The address is 0 address");
                   IERC20(nmt).transferFrom(bank, users[i], amts[i]);
             } 
       }
 
       function airdrop(address[] memory users, uint256 amt) public Onlysender {
             for (uint256 i = 0; i < users.length; i++){
+                  require(users[i] != address(0), "The address is 0 address");
                   IERC20(nmt).transferFrom(bank, users[i], amt);
             }
       }

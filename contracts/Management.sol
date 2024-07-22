@@ -59,6 +59,7 @@ contract Management is IManagement{
     }
  
     function addNodePropose(address _addr) override external{
+        require(_addr != address(0), "The address is 0 address");
         require(!nodeAddrSta[_addr], "This node is already a node address");
         bytes memory data = new bytes(0x00);
         _propose(address(0), _addr, data, TypeIndex.AddNodeAddr, "addNode");

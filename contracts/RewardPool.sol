@@ -240,6 +240,7 @@ contract RewardPool is Initializable, Ownable {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        require(signer != address(0), "The signer is 0 address");
         bool isActs = IConf(conf).acts(signer); 
         return(isActs, signer); 
     }

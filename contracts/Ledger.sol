@@ -80,6 +80,7 @@ contract Ledger is Initializable, ILedger{
     constructor(){_disableInitializers();}
 
     function init(address _conf) external initializer{
+        require(_conf != address(0), "The address is 0 address");
         conf = Iconf(_conf);
     }
     

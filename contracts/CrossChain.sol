@@ -224,13 +224,15 @@ contract Crosschain  is Initializable,Ownable {
    
     function addBlacklist(address[] memory guys) public onlyBlocker {
         for (uint256 i = 0; i< guys.length; i++){
-           require(guys[i] != address(0), "zero address");
+            require(guys[i] != address(0), "zero address");
+            require(!blacklist[guys[i]], "Already blacklisted");
             blacklist[guys[i]] = true;
         }
     }
 
     function removeBlacklist(address[] memory guys) public onlyOwner{
         for (uint256 i = 0; i< guys.length; i++){
+            require(blacklist[guys[i]], "Not a blacklist");
             blacklist[guys[i]] = false;
         }
     }
@@ -348,6 +350,7 @@ contract Crosschain  is Initializable,Ownable {
             require(_sta > 0, "Incorrect token state setting");
             require(token.transferFrom(_sender,address(this),_amount), "Token transfer failed");
         }
+        require(_amount > 0, "The _amount is 0");
         require(verfylimit(tokenAddr, 1 , _amount),"Extraction limit exceeded");
         uint256 _fee = chargeRate[_chain][tokenAddr];
         require(_amount > _fee, "Amount must be greater than fee");

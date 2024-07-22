@@ -92,6 +92,7 @@ contract FinanceToken is Initializable{
     }
 
     function __FinanceToken_init_unchained(address _nmtToken) internal initializer{
+        require(_nmtToken != address(0), "The address is 0 address");
         nmtToken = _nmtToken;
         reentrancyLock = false;
     }
@@ -110,6 +111,7 @@ contract FinanceToken is Initializable{
         require(unlockPercentage < 100 && unlockPercentage > 0, "percentage error");
         require(tokenReceiveAddress != address(0), "tokenReceiveAddress error");
         require(IERC20(nmtToken).transferFrom(msg.sender, address(this),sellNMTQuantity), "Token transfer failed");
+        require(paymentPrice > 0, "paymentPrice error");
         uint256 _financingId  = ++financingId;
         financeMsg[_financingId] = FinanceMsg(
                                                 msg.sender, 

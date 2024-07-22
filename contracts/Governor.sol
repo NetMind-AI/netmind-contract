@@ -186,6 +186,7 @@ contract Governor is Initializable,Ownable,IGovernor{
         require(msg.value > 0 , "cannot be 0");
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
         require(_proposalMsg.expire > _time, "vote expired");
+        require(_proposalMsg.status == 0 , "End of voting");
         require(_type < 2, "The vote type does not exist");
         if(_type==0){
             _proposalMsg.forVotes = _proposalMsg.forVotes + msg.value;

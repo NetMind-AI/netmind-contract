@@ -165,6 +165,8 @@ contract TrainingTask is Ownable{
     ) internal 
       initializer
     {
+       require(conf != address(0), "The address is 0 address");
+       require(_accountManage != address(0), "The address is 0 address");
        accountManage = IAccountManage(_accountManage);
        conf = _conf;
     }
@@ -218,6 +220,7 @@ contract TrainingTask is Ownable{
     function endJob(string memory userId, string memory jobId, uint256 usageAmount, uint256 state) external onlyExecutor{
         uint256 _num = userJobMsg[jobId];
         require( _num > 0, "JobId does not exist");
+        require( state == 2 || state == 3, "state error");
         JobMsg storage _jobMsg = jobMsg[_num];
         require(_jobMsg.state == 1, "task status error");
         require(keccak256(abi.encodePacked(_jobMsg.userId)) == keccak256(abi.encodePacked(userId)), "userId does not match");

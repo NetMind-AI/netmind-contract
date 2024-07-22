@@ -145,6 +145,7 @@ contract Purchase is Initializable,Ownable{
     }
 
     function __Purchase_init_unchained(address _router, address _usdc, address _nmtToken, address _exector, address _crosschain, string memory _receiver) internal initializer{
+        require(_router != address(0) && _usdc != address(0) && _nmtToken != address(0) && _exector != address(0) && _crosschain != address(0) && keccak256(abi.encode(_receiver)) != keccak256(abi.encode("0x0000000000000000000000000000000000000000")), "The address is 0 address");
         router = _router;
         usdc = _usdc;
         nmtToken = _nmtToken;
@@ -154,6 +155,7 @@ contract Purchase is Initializable,Ownable{
     }
     
     function updateReceiver(string memory _receiver) external onlyOwner{
+        require(keccak256(abi.encode(_receiver)) != keccak256(abi.encode("0x0000000000000000000000000000000000000000")), "The address is 0");
         receiver = _receiver;
     }
 

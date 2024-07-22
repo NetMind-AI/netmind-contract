@@ -233,6 +233,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         external
     {   
         address _sender = msg.sender;
+        require(amount >0 , "amount is 0");
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         require(nodeAddrSta[targetAddr], "The receiving address is not the node address"); 
         uint256 _time = block.timestamp;

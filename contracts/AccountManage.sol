@@ -209,6 +209,7 @@ contract AccountManage is Ownable{
     function __AccountManage_init_unchained(address _conf) internal 
       initializer
     {
+       require(_conf != address(0), "_conf error");
        conf = _conf;
        CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
        signNum = 2;
@@ -484,6 +485,7 @@ contract AccountManage is Ownable{
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        require(signer != address(0), "The address is 0 address");
         bool isActs = IConf(conf).acts(signer); 
 
         return(isActs, signer); 

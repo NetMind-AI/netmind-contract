@@ -123,6 +123,7 @@ contract FiatoSettle is Initializable, Ownable{
     }
 
     function __FiatoSettle_init_unchained(address _payment) internal initializer{
+        require(_payment != address(0), "The address is 0 address");
         payment = _payment;
     }
     
@@ -132,6 +133,7 @@ contract FiatoSettle is Initializable, Ownable{
 
     function distribute(address receiver, uint256 amount, uint256 burn) external nonReentrant returns(bool){
         require(msg.sender == payment, "payment error");
+        require(receiver != address(0), "The address is 0 address");
         require(address(this).balance >= amount + burn, "payment error");
         if (amount > 0) payable(receiver).transfer(amount);
         if (burn> 0) payable(burnAddr).transfer(burn);
