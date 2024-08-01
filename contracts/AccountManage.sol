@@ -505,6 +505,7 @@ contract AccountManage is Ownable{
                     if(offsetNmtAmount * 1e10 <= _userAccountMsg.balance){
                         _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e10;
                         _userAccountMsg.overdraft = 0;
+                        useFeeSum += offsetNmtAmount* 1e10;
                         emit CaclAccountBalance(_userId, offsetNmtAmount* 1e10, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft, 0, _price);
                         _userAccountMsg.usd = 0;
                         return true;
@@ -512,6 +513,7 @@ contract AccountManage is Ownable{
                         uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e10;
                         _userAccountMsg.overdraft = offsetOverdraft * _price / 1e24; 
                         _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e10;
+                        useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e10;
                         emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e10, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft - _userAccountMsg.overdraft, _userAccountMsg.overdraft, _price);
                         _userAccountMsg.usd = 0;
                         return true;
@@ -520,6 +522,7 @@ contract AccountManage is Ownable{
                     uint256 offsetNmtAmount = _userAccountMsg.overdraft * 1e24 / _price;
                     if(offsetNmtAmount * 1e10 <= _userAccountMsg.balance){
                         _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e10;
+                        useFeeSum += offsetNmtAmount* 1e10;
                         emit CaclAccountBalance(_userId, offsetNmtAmount * 1e10, _userAccountMsg.balance, 0, 0, overdraft, 0,_price);
                         _userAccountMsg.overdraft = 0;
                         return true;
@@ -527,6 +530,7 @@ contract AccountManage is Ownable{
                         uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e10;
                         _userAccountMsg.overdraft = offsetOverdraft * _price / 1e24; 
                         _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e10;
+                        useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e10;
                         emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e10, _userAccountMsg.balance, 0, 0, overdraft-_userAccountMsg.overdraft, _userAccountMsg.overdraft,_price);
                         return true;
                     }
