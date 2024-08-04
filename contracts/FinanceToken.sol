@@ -155,7 +155,6 @@ contract FinanceToken is Initializable{
         require(_purchaseNMTQuantity > 0, "purchaseNMTQuantity error");
         uint256 useAmount = _purchaseNMTQuantity * 10**decimals / finance.paymentPrice;
         require(IERC20(_paymentToken).transferFrom(_sender,finance.tokenReceiveAddress,useAmount), "Token transfer failed");
-        IERC20(nmtToken).transfer(_sender,_paymentAmount - useAmount);
         uint256 _purchaseNumber = ++purchaseNumber;
         userMsg[_purchaseNumber] = UserMsg(_sender, finance.endTime, finance.unlockIntervalDays, finance.unlockPercentage, 0, _purchaseNMTQuantity);
         userInfo[_sender].push(_purchaseNumber);
