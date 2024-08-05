@@ -106,6 +106,7 @@ contract FiatoSettle is Initializable, Ownable{
     bool private reentrancyLock;
     address public payment;
     address public burnAddr;
+    address public accountManage;
     event Distribute(address receiver, uint256 amount, uint256 burn);
     
     modifier nonReentrant() {
@@ -126,13 +127,17 @@ contract FiatoSettle is Initializable, Ownable{
         payment = _payment;
     }
     
+    function setAccountManage(address _accountManage) external onlyOwner{
+        accountManage = _accountManage;
+    }
+ 
     function setBurnAddr(address _burnAddr) external onlyOwner{
         burnAddr = _burnAddr;
     }
 
     function distribute(address receiver, uint256 amount, uint256 burn) external nonReentrant returns(bool){
-        require(msg.sender == payment, "payment error");
-        require(address(this).balance >= amount + burn, "payment error");
+        require(msg.sender == payment || msg.sender == accountManage, "sender error");
+        require(address(this).balance >= amount + burn, "fiatoSettle error");
         if (amount > 0) payable(receiver).transfer(amount);
         if (burn> 0) payable(burnAddr).transfer(burn);
         emit Distribute(receiver, amount, burn);
