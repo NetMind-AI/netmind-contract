@@ -137,8 +137,10 @@ contract AccountManage is Ownable{
     mapping(string => OrderMsg) public orderMsg;
     mapping(address => bool) public whiteAddr;
     address public fiatoSettle;
-    mapping(bytes32=>bool) public digestSta;
+    mapping(bytes32=>bool) digestSta;
     address public feeTo;
+    mapping(string => OrderCnyMsg) public orderCnyMsg;
+    uint256 public quotaCny;
     
     event WithdrawToken(address indexed _userAddr, uint256 _nonce, uint256 _amount);
     event UpdateAuthSta(address _addr, bool sta);
@@ -151,11 +153,15 @@ contract AccountManage is Ownable{
     event ExecDebit(string userId, uint256 useValue, uint256 offsetValue, uint256 balance, uint256 jobType);
     event UpdateAccountUsd(string userId, string orderId, uint256 usd, uint256 usdBalance, bool _type);
     event ExecDeduction(string userId, string orderId, string _msg, uint256 nmt, uint256 nmtBalance, uint256 usd, uint256 usdBalance, uint256 overdraft, uint256 overdraftBalance);
+    event ExecCnyDeduction(string userId, string orderId, string _msg, uint256 cny, uint256 cnyBalance, uint256 cnyOverdraft, uint256 cnyOverdraftBalance);
     event Refund(string userId, string deductionOrderId, string orderId, uint256 nmt, uint256 nmtBalance, uint256 usd, uint256 usdBalance, uint256 overdraft, uint256 overdraftBalance);
+    event RefundCny(string userId, string deductionOrderId, string orderId, uint256 cny, uint256 cnyBalance, uint256 cnyOverdraft, uint256 cnyOverdraftBalance);
     event CaclAccountBalance(string userId, uint256 nmt, uint256 nmtBalance, uint256 usd, uint256 usdBalance, uint256 overdraft, uint256 overdraftBalance, uint256 price);
     event DistributeNmt(string id, address reciver, uint256 amount, uint256 feeAmount);
     event DistributeUsd(string id, address reciver, uint256 usdAmount, uint256 nmtAmount, uint256 feeUsdAmount, uint256 feeNmtAmount);
-
+    event UpdateAccountCny(string userId, string orderId, uint256 usd, uint256 usdBalance, bool _type);
+    event CaclAccountCnyBalance(string userId, uint256 cny, uint256 cnyBalance, uint256 cnyOverdraft, uint256 cnyOverdraftBalance);
+    event DistributeCny(string id, address reciver, uint256 usdAmount, uint256 nmtAmount, uint256 feeUsdAmount, uint256 feeNmtAmount);
     
     struct UserAccountMsg {
         uint256 balance;
@@ -164,6 +170,8 @@ contract AccountManage is Ownable{
         address addr;
         uint256 usd;
         uint256 overdraft;
+        uint256 cny;
+        uint256 cnyOverdraft;
     }
 
     struct OrderMsg {
@@ -177,12 +185,14 @@ contract AccountManage is Ownable{
         uint256 distributeUsd;
     }
     
-    struct Data {
-        address userAddr;
-        uint256 amount;
-        uint256 expiration;
+    struct OrderCnyMsg {
+        uint256 cny;
+        uint256 overdraft;
+        uint256 refundCny;
+        uint256 refundOverdraft;
+        uint256 distributeCny;
     }
-
+    
     struct Sig {
         uint8 v;
         bytes32 r;
@@ -231,21 +241,21 @@ contract AccountManage is Ownable{
 
     constructor(){_disableInitializers();}
 
-    function init(address _conf)  external 
-       initializer
-    {
-        __Ownable_init_unchained();
-        __AccountManage_init_unchained(_conf);
-    }
+    // function init(address _conf)  external 
+    //    initializer
+    // {
+    //     __Ownable_init_unchained();
+    //     __AccountManage_init_unchained(_conf);
+    // }
 
-    function __AccountManage_init_unchained(address _conf) internal 
-      initializer
-    {
-       require(_conf != address(0), "_conf error");
-       conf = _conf;
-       CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
-       signNum = 2;
-    }
+    // function __AccountManage_init_unchained(address _conf) internal 
+    //   initializer
+    // {
+    //    require(_conf != address(0), "_conf error");
+    //    conf = _conf;
+    //    CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
+    //    signNum = 2;
+    // }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
         require(_signNum > 0, "signNum error");
@@ -259,6 +269,10 @@ contract AccountManage is Ownable{
 
     function updateQuota(uint256 _quota) external onlyOwner{
         quota = _quota;
+    }
+  
+    function updateQuotaCny(uint256 _quotaCny) external onlyOwner{
+        quotaCny = _quotaCny;
     }
   
     function setFiatoSettle(address _fiatoSettle) external onlyOwner{
@@ -290,17 +304,19 @@ contract AccountManage is Ownable{
         require(userAccountByAddr[_addr] == 0, "User address is already occupied");
         uint256 _num = ++num;
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        _userAccountMsg.addr = _addr;
         _userAccountMsg.userId = _userId;
         userAccountById[_userId] = _num;
-        userAccountByAddr[_addr] = _num;
+        if(_addr != address(0x00)){
+            _userAccountMsg.addr = _addr;
+            userAccountByAddr[_addr] = _num;
+        }
         emit InitAccount(_userId, _addr);
     }
 
     function updateAccount(string memory _userId, address _addr) external onlyExecutor{
         uint256 _num = userAccountById[_userId];
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        require(_num > 0, "The user id does not exist");
+        require(_num > 0, "not exist");
         userAccountByAddr[_userAccountMsg.addr] = 0;
         _userAccountMsg.addr = _addr;
         if(_addr != address(0x00)){
@@ -311,11 +327,7 @@ contract AccountManage is Ownable{
     }
  
     function updateAccountUsd(string memory _userId, string memory _orderId, uint256 _usd, bool _type, uint256 _price) external onlyAccountUsdExecutor{
-        uint256 _num = userAccountById[_userId];
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        require(_num > 0, "The user id does not exist");
-        require(!orderId[_orderId], "usd orderId error");
-        orderId[_orderId] = true;
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         if(_type){
             _userAccountMsg.usd = _userAccountMsg.usd + _usd;
         }else {
@@ -325,16 +337,34 @@ contract AccountManage is Ownable{
         require(_caclAccountBalance(_userId, _price), "caclAccountBalance error");
     }
  
+    function updateAccountCny(string memory _userId, string memory _orderId, uint256 _cny, bool _type) external onlyAccountUsdExecutor{
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
+        if(_type){
+            _userAccountMsg.cny = _userAccountMsg.cny + _cny;
+        }else {
+            _userAccountMsg.cny = _userAccountMsg.cny - _cny;
+        }
+        emit UpdateAccountCny(_userId, _orderId, _cny, _userAccountMsg.cny, _type);
+        uint256 cnyOverdraft = _userAccountMsg.cnyOverdraft;
+        if(cnyOverdraft> 0){
+            if(_userAccountMsg.cny >= cnyOverdraft){
+                _userAccountMsg.cny = _userAccountMsg.cny - cnyOverdraft;
+                _userAccountMsg.cnyOverdraft = 0;
+                emit CaclAccountCnyBalance(_userId, cnyOverdraft, _userAccountMsg.cny, cnyOverdraft, 0);
+            }else {
+                _userAccountMsg.cnyOverdraft = cnyOverdraft - _userAccountMsg.cny;
+                _userAccountMsg.cny = 0;
+                emit CaclAccountCnyBalance(_userId, _userAccountMsg.cny, 0, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft);
+            }
+        }
+    }
+ 
     function caclAccountBalance(string memory _userId, uint256 _price) external onlyAccountUsdExecutor returns(bool){
         return _caclAccountBalance(_userId, _price);
     }
 
     function execDeduction(string memory _userId, string memory _orderId, uint256 _nmt, uint256 _usd, uint256 _overdraft, string memory _msg) external onlyExecDeductionExecutor{
-        uint256 _num = userAccountById[_userId];
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        require(_num > 0, "The user id does not exist");
-        require(!orderId[_orderId], "usd orderId error");
-        orderId[_orderId] = true;
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         _userAccountMsg.usd = _userAccountMsg.usd - _usd;
         _userAccountMsg.overdraft = _userAccountMsg.overdraft + _overdraft;
         require(_userAccountMsg.overdraft <= quota, "quota error");
@@ -342,6 +372,15 @@ contract AccountManage is Ownable{
         _userAccountMsg.balance = _userAccountMsg.balance - _nmt;
         orderMsg[_orderId] = OrderMsg(_nmt, _usd, _overdraft, 0, 0, 0, 0, 0);
         emit ExecDeduction(_userId, _orderId, _msg, _nmt, _userAccountMsg.balance, _usd, _userAccountMsg.usd, _overdraft, _userAccountMsg.overdraft);
+    }
+
+    function execCnyDeduction(string memory _userId, string memory _orderId, uint256 _cny, uint256 _cnyOverdraft, string memory _msg) external onlyExecDeductionExecutor{
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
+        _userAccountMsg.cny = _userAccountMsg.cny - _cny;
+        _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft + _cnyOverdraft;
+        require(_userAccountMsg.cnyOverdraft <= quotaCny, "quotaCny error");
+        orderCnyMsg[_orderId] = OrderCnyMsg(_cny, _cnyOverdraft, 0, 0, 0);
+        emit ExecCnyDeduction(_userId, _orderId, _msg, _cny, _userAccountMsg.cny, _cnyOverdraft, _userAccountMsg.cnyOverdraft);
     }
     
     function refund(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _nmt, uint256 _usd, uint256 _overdraft) external onlyExecDeductionExecutor{
@@ -355,16 +394,27 @@ contract AccountManage is Ownable{
         _orderMsg.refundNmt += _nmt;
         _orderMsg.refundUsd += _usd;
         _orderMsg.overdraft += _overdraft;
-        uint256 _num = userAccountById[_userId];
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        require(_num > 0, "The user id does not exist");
-        require(!orderId[_orderId], "refund orderId error");
-        orderId[_orderId] = true;
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         _userAccountMsg.usd = _userAccountMsg.usd + _usd;
         _userAccountMsg.overdraft = _userAccountMsg.overdraft - _overdraft;
         useFeeSum -= _nmt;
         _userAccountMsg.balance = _userAccountMsg.balance + _nmt;
         emit Refund(_userId, _deductionOrderId, _orderId, _nmt, _userAccountMsg.balance, _usd, _userAccountMsg.usd, _overdraft, _userAccountMsg.overdraft);
+    }
+   
+    function refundCny(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _cny, uint256 _cnyOverdraft) external onlyExecDeductionExecutor{
+        OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[_deductionOrderId];
+        require(
+            _orderCnyMsg.cny >= _orderCnyMsg.refundCny + _cny && 
+            _orderCnyMsg.overdraft >= _orderCnyMsg.refundOverdraft + _cnyOverdraft, 
+            "orderIdMsg error"
+        );
+        _orderCnyMsg.refundCny+= _cny;
+        _orderCnyMsg.refundOverdraft += _cnyOverdraft;
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
+        _userAccountMsg.cny = _userAccountMsg.cny + _cny;
+        _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft - _cnyOverdraft;
+        emit RefundCny(_userId, _deductionOrderId, _orderId, _cny, _userAccountMsg.cny, _cnyOverdraft, _userAccountMsg.cnyOverdraft);
     }
 
     function tokenCharge() external payable{
@@ -389,9 +439,7 @@ contract AccountManage is Ownable{
     }
 
     function freeze(string memory _userId, uint256 freezeValue, uint256 jobType) external onlyAuth returns(bool){
-        uint256 _num = userAccountById[_userId];
-        require(_num > 0, "The user id does not exist");
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
         _userAccountMsg.balance = _userAccountMsg.balance - freezeValue;
         _userAccountMsg.freezed = _userAccountMsg.freezed + freezeValue;
         emit Freeze(_userId, freezeValue, _userAccountMsg.balance, jobType);
@@ -399,9 +447,7 @@ contract AccountManage is Ownable{
     }
 
     function execDebit(string memory _userId, uint256 useValue, uint256 offsetValue, uint256 jobType) external onlyAuth returns(bool){
-        uint256 _num = userAccountById[_userId];
-        require(_num > 0, "The user id does not exist");
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
         _userAccountMsg.freezed = _userAccountMsg.freezed - useValue - offsetValue;
         _userAccountMsg.balance = _userAccountMsg.balance + offsetValue;
         uint256 _settlement;
@@ -420,6 +466,7 @@ contract AccountManage is Ownable{
     }
 
     function distributeNmt(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+        require(orderId[paymentId], "paymentId error");
         OrderMsg storage _orderMsg = orderMsg[paymentId];
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
         if(gpu_fee > 0){
@@ -434,7 +481,12 @@ contract AccountManage is Ownable{
         uint256 len = vs.length;
         require(len*2 == rs.length, "Signature parameter length mismatch");
 
-        bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, platform_fee, expir);
+        bytes32 digest =  keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, platform_fee, expir)))
+        );
         require(!digestSta[digest], "digest error"); 
         digestSta[digest] = true;
         address[] memory signAddrs = new address[](len);
@@ -455,43 +507,21 @@ contract AccountManage is Ownable{
     }
 
     function distributeUsd(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
-        //check args
+        require(orderId[paymentId], "paymentId error");
         OrderMsg storage _orderMsg = orderMsg[paymentId];
-        require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
-        if(gpu_fee > 0){
-            require(whiteAddr[gpu_provider], "not Whiltelist user");
-        }
-
-        require(_orderMsg.usd - _orderMsg.distributeUsd >=  gpu_fee + platform_fee, "distribute out of range");
-        require(block.timestamp <= expir, "sign expired");
-
-        //check sign 
-        {//stack too deep, use a code block to fix this issue
-            uint256 counter;
-            uint256 len = vs.length;
-            require(len*2 == rs.length, "Signature parameter length mismatch");
-
-            bytes32 digest = getDigest(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir);
-            require(!digestSta[digest], "digest error"); 
-            digestSta[digest] = true;
-            address[] memory signAddrs = new address[](len);
-            for (uint256 i = 0; i < len; i++) {
-                (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
-                signAddrs[i] = signAddr;
-                if (result){
-                    counter++;
-                }
-            }
-
-            require(counter >= signNum, "lack of signature");
-            require(areElementsUnique(signAddrs), "duplicate signature");
-        }
-
-        //distribute
+        require(_orderMsg.usd - _orderMsg.distributeUsd >=  gpu_fee + platform_fee, "distributeUsd out of range");
+        _distribute(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir, vs, rs);
         _orderMsg.distributeUsd += (gpu_fee + platform_fee);
-        require(IFiatoSettle(fiatoSettle).distribute(gpu_provider, gpu_nmt, platform_nmt), "cleaner feild");
-
         emit DistributeUsd(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt);
+    }
+
+    function distributeCny(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
+        require(orderId[paymentId], "paymentId error");
+        OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[paymentId];
+        require(_orderCnyMsg.cny - _orderCnyMsg.distributeCny >=  gpu_fee + platform_fee, "distributeCny out of range");
+        _distribute(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir, vs, rs);
+        _orderCnyMsg.distributeCny += (gpu_fee + platform_fee);
+        emit DistributeCny(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt);
     }
 
     function withdrawComputingFee(
@@ -509,18 +539,16 @@ contract AccountManage is Ownable{
         providerFeeSum = providerFeeSum - uints[0];
     }
     
-    function queryUserMsgById(string memory _userId) external view returns (uint256, uint256, uint256, uint256, address) {
-        uint256 _num = userAccountById[_userId];
-        require(_num > 0, "The user id does not exist");
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.freezed, _userAccountMsg.addr);
+    function queryUserMsgById(string memory _userId) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, address) {
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
+        return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft, _userAccountMsg.freezed, _userAccountMsg.addr);
     }
 
-    function queryUserMsgByAddr(address _addr) external view returns (uint256, uint256, uint256, uint256, string memory) {
+    function queryUserMsgByAddr(address _addr) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, string memory) {
         uint256 _num = userAccountByAddr[_addr];
-        require(_num > 0, "The user id does not exist");
+        require(_num > 0, "not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.freezed, _userAccountMsg.userId);
+        return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft, _userAccountMsg.freezed, _userAccountMsg.userId);
     }
 
     function queryUserMsg(
@@ -584,10 +612,47 @@ contract AccountManage is Ownable{
         );
     }
 
+    function _distribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) internal{
+        require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
+        if(gpu_fee > 0){
+            require(whiteAddr[gpu_provider], "not Whiltelist user");
+        }
+
+        require(block.timestamp <= expir, "sign expired");
+
+        //check sign 
+        {//stack too deep, use a code block to fix this issue
+            uint256 counter;
+            uint256 len = vs.length;
+            require(len*2 == rs.length, "length mismatch");
+
+            bytes32 digest = keccak256(
+                    abi.encodePacked(
+                        '\x19\x01',
+                        DOMAIN_SEPARATOR(),
+                        keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee,platform_nmt, expir)))
+                );
+            require(!digestSta[digest], "digest error"); 
+            digestSta[digest] = true;
+            address[] memory signAddrs = new address[](len);
+            for (uint256 i = 0; i < len; i++) {
+                (bool result, address signAddr) = verifySign(digest, Sig(vs[i], rs[i*2], rs[i*2+1]));
+                signAddrs[i] = signAddr;
+                if (result){
+                    counter++;
+                }
+            }
+
+            require(counter >= signNum, "lack of signature");
+            require(areElementsUnique(signAddrs), "duplicate signature");
+        }
+
+        //distribute
+        require(IFiatoSettle(fiatoSettle).distribute(gpu_provider, gpu_nmt, platform_nmt), "cleaner feild");
+    }
+
     function _caclAccountBalance(string memory _userId, uint256 _price) internal returns(bool){
-        uint256 _num = userAccountById[_userId];
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
-        require(_num > 0, "The user id does not exist");
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
         uint256 overdraft = _userAccountMsg.overdraft;
         if(overdraft> 0){
             if(_userAccountMsg.usd >= overdraft){
@@ -661,12 +726,18 @@ contract AccountManage is Ownable{
         uint8[] calldata vs,
         bytes32[] calldata rssMetadata
     ) internal{
-        require( block.timestamp<= uints[1], "The transaction exceeded the time limit");
+        require( block.timestamp<= uints[1], "exceeded limit");
         uint256 len = vs.length;
         uint256 counter;
         uint256 _nonce = nonce[addr]++;
-        require(len*2 == rssMetadata.length, "Signature parameter length mismatch");
-        bytes32 digest = getDigest(Data( addr, uints[0], uints[1]), _nonce);
+        require(len*2 == rssMetadata.length, "length mismatch");
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(addr, uints[0], uints[1], _nonce))
+            )
+        );
         address[] memory signAddrs = new address[](len);
         for (uint256 i = 0; i < len; i++) {
             (bool result, address signAddr) = verifySign(
@@ -681,54 +752,38 @@ contract AccountManage is Ownable{
        
         require(
             counter >= signNum,
-            "The number of signed accounts did not reach the minimum threshold"
+            "less than threshold"
         );
-        require(areElementsUnique(signAddrs), "Signature parameter not unique");
+        require(areElementsUnique(signAddrs), "not unique");
         withdrawData[addr][_nonce] =  uints[0];
         payable(addr).transfer(uints[0]);
         emit WithdrawToken(addr, _nonce, uints[0]);
     }
 
+    function getUserAccountMsg(string memory _userId, string memory _orderId) internal returns (UserAccountMsg storage)  {
+        uint256 _num = userAccountById[_userId];
+        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
+        require(_num > 0, "user not exist");
+        require(!orderId[_orderId], "refund orderId error");
+        orderId[_orderId] = true;
+        return _userAccountMsg; 
+    }
+
+    function getUserAccountMsg(string memory _userId) internal view returns (UserAccountMsg storage)  {
+        uint256 _num = userAccountById[_userId];
+        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
+        require(_num > 0, "user not exist");
+        return _userAccountMsg; 
+    }
+
     function verifySign(bytes32 _digest,Sig memory _sig) internal view returns (bool, address)  {
-        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "ECDSA: invalid signature 's' value");
-        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "ECDSA: invalid signature 'v' value");
+        require(uint256(_sig.s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "invalid 's' value");
+        require(uint8(_sig.v) == 27 || uint8(_sig.v) == 28, "invalid 'v' value");
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
-        require(signer != address(0), "The address is 0 address");
+        require(signer != address(0), "0 address");
         bool isActs = IConf(conf).acts(signer); 
-
         return(isActs, signer); 
     }
-    
-    function getDigest(Data memory _data, uint256 _nonce) internal view returns(bytes32 digest){
-        digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(_data.userAddr, _data.amount, _data.expiration, _nonce))
-            )
-        );
-    }
-
-    //distribute
-    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 platform_fee, uint256 expir) internal view returns(bytes32 digest){
-        digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, platform_fee, expir)))
-        );
-    }
-
-    //agentDistribute
-    function getDigest(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir) internal view returns(bytes32 digest){
-        digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee,platform_nmt, expir)))
-        );
-    }
-
 }
