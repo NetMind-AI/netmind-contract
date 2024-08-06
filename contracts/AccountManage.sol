@@ -159,7 +159,7 @@ contract AccountManage is Ownable{
     event CaclAccountBalance(string userId, uint256 nmt, uint256 nmtBalance, uint256 usd, uint256 usdBalance, uint256 overdraft, uint256 overdraftBalance, uint256 price);
     event DistributeNmt(string id, address reciver, uint256 amount, uint256 feeAmount);
     event DistributeUsd(string id, address reciver, uint256 usdAmount, uint256 nmtAmount, uint256 feeUsdAmount, uint256 feeNmtAmount);
-    event UpdateAccountCny(string userId, string orderId, uint256 usd, uint256 usdBalance, bool _type);
+    event UpdateAccountCny(string userId, string orderId, uint256 cny, uint256 cnyBalance, bool _type);
     event CaclAccountCnyBalance(string userId, uint256 cny, uint256 cnyBalance, uint256 cnyOverdraft, uint256 cnyOverdraftBalance);
     event DistributeCny(string id, address reciver, uint256 usdAmount, uint256 nmtAmount, uint256 feeUsdAmount, uint256 feeNmtAmount);
     
