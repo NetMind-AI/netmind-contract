@@ -764,7 +764,7 @@ contract AccountManage is Ownable{
         uint256 _num = userAccountById[_userId];
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(_num > 0, "user not exist");
-        require(!orderId[_orderId], "refund orderId error");
+        require(!orderId[_orderId], "orderId error");
         orderId[_orderId] = true;
         return _userAccountMsg; 
     }
