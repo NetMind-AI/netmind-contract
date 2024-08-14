@@ -387,8 +387,7 @@ contract AccountManage is Ownable{
         OrderMsg storage _orderMsg = orderMsg[_deductionOrderId];
         require(
             _orderMsg.nmtAmount >= _orderMsg.refundNmt + _nmt && 
-            _orderMsg.usd >= _orderMsg.refundUsd + _usd && 
-            _orderMsg.overdraft >= _orderMsg.refundOverdraft + _overdraft, 
+            _orderMsg.usd >= _orderMsg.refundUsd + _usd, 
             "orderIdMsg error"
         );
         _orderMsg.refundNmt += _nmt;
@@ -396,6 +395,7 @@ contract AccountManage is Ownable{
         _orderMsg.overdraft += _overdraft;
         UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         _userAccountMsg.usd = _userAccountMsg.usd + _usd;
+        require(_userAccountMsg.overdraft >= _overdraft, "overdraft error");
         _userAccountMsg.overdraft = _userAccountMsg.overdraft - _overdraft;
         useFeeSum -= _nmt;
         _userAccountMsg.balance = _userAccountMsg.balance + _nmt;
@@ -405,14 +405,14 @@ contract AccountManage is Ownable{
     function refundCny(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _cny, uint256 _cnyOverdraft) external onlyExecDeductionExecutor{
         OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[_deductionOrderId];
         require(
-            _orderCnyMsg.cny >= _orderCnyMsg.refundCny + _cny && 
-            _orderCnyMsg.overdraft >= _orderCnyMsg.refundOverdraft + _cnyOverdraft, 
+            _orderCnyMsg.cny >= _orderCnyMsg.refundCny + _cny, 
             "orderIdMsg error"
         );
         _orderCnyMsg.refundCny+= _cny;
         _orderCnyMsg.refundOverdraft += _cnyOverdraft;
         UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         _userAccountMsg.cny = _userAccountMsg.cny + _cny;
+        require(_userAccountMsg.cnyOverdraft >= _cnyOverdraft, "cnyOverdraft error");
         _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft - _cnyOverdraft;
         emit RefundCny(_userId, _deductionOrderId, _orderId, _cny, _userAccountMsg.cny, _cnyOverdraft, _userAccountMsg.cnyOverdraft);
     }
@@ -549,57 +549,6 @@ contract AccountManage is Ownable{
         require(_num > 0, "not exist");
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft, _userAccountMsg.freezed, _userAccountMsg.userId);
-    }
-
-    function queryUserMsg(
-        uint256 _page,
-        uint256 _limit
-    )
-    external
-    view
-    returns(
-        uint256[] memory balance,
-        uint256[] memory freezed,
-        string[] memory userId,
-        address[] memory addr,
-        uint256[] memory usd,
-        uint256[] memory overdraft,
-        uint256 _num
-    )
-    {
-        _num = num;
-        if (_limit > _num){
-            _limit = _num;
-        }
-        if (_page<2){
-            _page = 1;
-        }
-        _page--;
-        uint256 start = _page * _limit;
-        uint256 end = start + _limit;
-        if (end > _num){
-            end = _num;
-            _limit = end - start;
-        }
-        balance = new uint256[](_limit);
-        freezed = new uint256[](_limit);
-        userId = new string[](_limit);
-        addr = new address[](_limit);
-        usd = new uint256[](_limit);
-        if (_num > 0){
-            require(end > start, "Query index range out of limit");
-            uint256 j;
-            for (uint256 i = start+1; i <= end; i++) {
-                UserAccountMsg memory _userAccountMsg = userAccountMsg[i];
-                balance[j] = _userAccountMsg.balance;
-                freezed[j] = _userAccountMsg.freezed;
-                userId[j] = _userAccountMsg.userId;
-                addr[j] = _userAccountMsg.addr;
-                usd[j] = _userAccountMsg.usd;
-                overdraft[j] = _userAccountMsg.overdraft;
-                j++;
-            }
-        }
     }
 
     function DOMAIN_SEPARATOR() public view returns(bytes32){
