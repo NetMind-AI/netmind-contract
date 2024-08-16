@@ -387,12 +387,12 @@ contract AccountManage is Ownable{
         OrderMsg storage _orderMsg = orderMsg[_deductionOrderId];
         require(
             _orderMsg.nmtAmount >= _orderMsg.refundNmt + _nmt && 
-            _orderMsg.usd + _orderMsg.overdraft >= _orderMsg.refundUsd + _usd, 
+            _orderMsg.usd + _orderMsg.overdraft >= _orderMsg.refundUsd + _usd + _orderMsg.refundOverdraft + _overdraft, 
             "orderIdMsg error"
         );
         _orderMsg.refundNmt += _nmt;
         _orderMsg.refundUsd += _usd;
-        _orderMsg.overdraft += _overdraft;
+        _orderMsg.refundOverdraft += _overdraft;
         UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         _userAccountMsg.usd = _userAccountMsg.usd + _usd;
         require(_userAccountMsg.overdraft >= _overdraft, "overdraft error");
@@ -405,7 +405,7 @@ contract AccountManage is Ownable{
     function refundCny(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _cny, uint256 _cnyOverdraft) external onlyExecDeductionExecutor{
         OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[_deductionOrderId];
         require(
-            _orderCnyMsg.cny + _orderCnyMsg.overdraft >= _orderCnyMsg.refundCny + _cny, 
+            _orderCnyMsg.cny + _orderCnyMsg.overdraft >= _orderCnyMsg.refundCny + _cny + _orderCnyMsg.refundOverdraft + _cnyOverdraft, 
             "orderIdMsg error"
         );
         _orderCnyMsg.refundCny+= _cny;
