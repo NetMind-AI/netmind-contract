@@ -386,7 +386,8 @@ contract AccountManage is Ownable{
     function refund(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _nmt, uint256 _usd, uint256 _overdraft) external onlyExecDeductionExecutor{
         OrderMsg storage _orderMsg = orderMsg[_deductionOrderId];
         require(
-            _orderMsg.nmtAmount >= _orderMsg.refundNmt + _nmt,
+            _orderMsg.nmtAmount >= _orderMsg.refundNmt + _nmt && 
+            _orderMsg.usd + _orderMsg.overdraft + 500 >= _orderMsg.refundUsd + _usd + _orderMsg.refundOverdraft + _overdraft, 
             "orderIdMsg error"
         );
         _orderMsg.refundNmt += _nmt;
