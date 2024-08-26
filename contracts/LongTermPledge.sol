@@ -165,10 +165,18 @@ contract LongTermPledge is Ownable{
     }
     
     function stake(address _nodeAddr, address _token, uint256 _amount, bool _type) payable external nonReentrant(){
-        address _sender = msg.sender;
+        _stake(msg.sender, _nodeAddr, _token, _amount, _type);
+    }
+      
+    function migrateStake(address _sender, address _nodeAddr, bool _type) payable external{
+        require(msg.sender == address(pledgeContract), "pledgeContract error");
+        _stake(_sender, _nodeAddr, address(0), 0, _type);
+    }
+   
+    function _stake(address _sender, address _nodeAddr, address _token, uint256 _amount, bool _type) internal{
         _amount = msg.value;
         require(_token == address(0), "token error");
-        require(_amount >= 1e16, "value error");
+        require(_amount >= 0, "value error");
         require(pledgeContract.nodeAddrSta(_nodeAddr), "nodeAddr error");
         uint256 _nodeStakeNum = pledgeContract.nodeChainAmount("Netmind", _nodeAddr) + _amount;
         address[] memory _addrArray = new address[](1) ;
