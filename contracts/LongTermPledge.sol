@@ -159,15 +159,24 @@ contract LongTermPledge is Ownable{
     }
 
     function updateLockPeriod(uint256 _lockPeriod) external onlyOwner{
+        require(_lockPeriod <= 2* 365 days && _lockPeriod >= 30 days, "lockPeriod error");
         lockPeriod = _lockPeriod;
         emit UpdateLockPeriod(_lockPeriod);
     }
     
     function stake(address _nodeAddr, address _token, uint256 _amount, bool _type) payable external nonReentrant(){
-        address _sender = msg.sender;
+        _stake(msg.sender, _nodeAddr, _token, _amount, _type);
+    }
+      
+    function migrateStake(address _sender, address _nodeAddr, bool _type) payable external{
+        require(msg.sender == address(pledgeContract), "pledgeContract error");
+        _stake(_sender, _nodeAddr, address(0), 0, _type);
+    }
+   
+    function _stake(address _sender, address _nodeAddr, address _token, uint256 _amount, bool _type) internal{
         _amount = msg.value;
         require(_token == address(0), "token error");
-        require(_amount >= 1e16, "value error");
+        require(_amount >= 0, "value error");
         require(pledgeContract.nodeAddrSta(_nodeAddr), "nodeAddr error");
         uint256 _nodeStakeNum = pledgeContract.nodeChainAmount("Netmind", _nodeAddr) + _amount;
         address[] memory _addrArray = new address[](1) ;

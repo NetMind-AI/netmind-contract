@@ -201,6 +201,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
     }
 
     function updateExector(address _exector) external onlyOwner{
+        require(_exector != address(0), "The address is 0 address");
         exector = _exector;
     }
 
@@ -268,6 +269,7 @@ contract RewardContract is Initializable,Ownable,IRewardContract {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address _accessAccount = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        require(_accessAccount != address(0), "The address is 0 address");
         uint256 _nodeRank = IPledgeContract(conf.Staking()).queryNodeIndex(_accessAccount);
         return (_nodeRank < 22 && _nodeRank > 0, _accessAccount);
     }

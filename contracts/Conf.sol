@@ -19,8 +19,14 @@ contract Initialize {
 contract Conf is Initialize {
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address guy) external auth { wards[guy] = 1; }
-    function deny(address guy) external auth { wards[guy] = 0; }
+    function rely(address guy) external auth { 
+        require(guy != address(0), "The address is 0 address");
+        wards[guy] = 1; 
+    }
+    function deny(address guy) external auth { 
+        require(guy != address(0), "The address is 0 address");
+        wards[guy] = 0; 
+    }
     modifier auth { require(wards[msg.sender] == 1); _; }
 
     // --- NetMind contracts ---
@@ -63,6 +69,8 @@ contract Conf is Initialize {
     //new reward opition, that will reset the reward proportion. new reward proportion: staking => 50%, liquidity => 30%, node => 20%
     uint256 private liquidity_awd; //Award of liquidity proportion => 30% [THD]
 
+    address public accountUsdExecutor;
+    address public execDeductionExecutor;
 
     constructor(){_disableInitializers();}
     
@@ -85,6 +93,8 @@ contract Conf is Initialize {
         else if (what == "AccountManageExecutor") accountManageExecutor = dst;
         else if (what == "PriceServiceExecutor") priceServiceExecutor = dst;
         else if (what == "TrainingTaskExecutor") trainingTaskExecutor = dst;
+        else if (what == "accountUsdExecutor") accountUsdExecutor = dst;
+        else if (what == "execDeductionExecutor") execDeductionExecutor = dst;
     }
 
     function file(bytes32 what, uint256 data) public auth {

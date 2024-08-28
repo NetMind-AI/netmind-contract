@@ -96,9 +96,7 @@ contract Snapshoot is Initializable, ISnapshoot{
         uint256 len = _types.length;
         require(len == _days.length, "Number of parameters does not match"); 
         require(_days.length == _dataHashs.length, "Number of parameters does not match"); 
-        require(_dataHashs.length == _dataIds.length , "Number of parameters does not match"); 
-        //uint256 _nodeRank = pledgeContract.queryNodeIndex(_sender);
-        //require(_nodeRank < 22 && _nodeRank > 0, "The caller is not the nodeAddr"); 
+        require(_dataHashs.length == _dataIds.length , "Number of parameters does not match");
         require(conf.acts(_sender), "only accountant");
         for (uint256 i=0; i < len; i++){
              _updatSnapshoot(_types[i],_days[i],_dataHashs[i],_dataIds[i],_sender);

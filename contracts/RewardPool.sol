@@ -148,7 +148,7 @@ contract RewardPool is Initializable, Ownable {
     function init(address _conf, address _reward, uint256 _dailymaxmove, uint256 _signum, uint256 _moveable) public initializer{
         require(_conf != address(0), "_conf is zero address");
         require(_reward != address(0), "_reward is zero address");
-
+        require(_signum > 1 , "_signum error");
         conf = _conf;
         Rewardcontract = _reward;
         DailyMaxMove = _dailymaxmove;
@@ -240,6 +240,7 @@ contract RewardPool is Initializable, Ownable {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        require(signer != address(0), "The signer is 0 address");
         bool isActs = IConf(conf).acts(signer); 
         return(isActs, signer); 
     }

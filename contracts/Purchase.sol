@@ -145,6 +145,7 @@ contract Purchase is Initializable,Ownable{
     }
 
     function __Purchase_init_unchained(address _router, address _usdc, address _nmtToken, address _exector, address _crosschain, string memory _receiver) internal initializer{
+        require(_router != address(0) && _usdc != address(0) && _nmtToken != address(0) && _exector != address(0) && _crosschain != address(0) && keccak256(abi.encode(_receiver)) != keccak256(abi.encode("0x0000000000000000000000000000000000000000")), "The address is 0 address");
         router = _router;
         usdc = _usdc;
         nmtToken = _nmtToken;
@@ -154,6 +155,7 @@ contract Purchase is Initializable,Ownable{
     }
     
     function updateReceiver(string memory _receiver) external onlyOwner{
+        require(keccak256(abi.encode(_receiver)) != keccak256(abi.encode("0x0000000000000000000000000000000000000000")), "The address is 0");
         receiver = _receiver;
     }
 
@@ -164,6 +166,7 @@ contract Purchase is Initializable,Ownable{
     
     function swapToken(uint256 _amount, uint256 _minOut, string memory _orderId) external nonReentrant{
         require(msg.sender == exector, "exector error");
+        require(calculateAmountOutMin(_amount) * 9 /10 < _minOut, "minOut error");
         require(!orderId[_orderId], "orderId error");
         orderId[_orderId] = true;
         require(IERC20(usdc).balanceOf(address(this)) >= _amount, "Insufficient balance");
@@ -190,6 +193,10 @@ contract Purchase is Initializable,Ownable{
         path[1] = nmtToken;
         uint[] memory amounts = IPancakeRouter(router).getAmountsOut(amountIn, path);
         return amounts[1]; 
+    }
+
+    function withdraw(address to) external onlyOwner(){
+        IERC20(nmtToken).transfer(to, IERC20(nmtToken).balanceOf(address(this)));
     }
 
 }

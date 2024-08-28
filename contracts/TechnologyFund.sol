@@ -147,7 +147,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         uint256[] amounts;
         bool[] proposalStas;
         uint256[] expires;
-        address[] allProposers;
     }
 
     modifier nonReentrant() {
@@ -159,26 +158,28 @@ contract TechnologyFund is ITechnologyFund,Ownable{
 
     constructor(){_disableInitializers();}
 
-    function init(address[] calldata _nodeAddrs) external initializer{
+    function init(address[] calldata _nodeAddrs, uint256 _LockTime) external initializer{
         __Ownable_init_unchained();
-        __TechnologyFund_init_unchained(_nodeAddrs);
+        __TechnologyFund_init_unchained(_nodeAddrs, _LockTime);
     }
 
-    function __TechnologyFund_init_unchained(address[] calldata _nodeAddrs) internal initializer{
+    function __TechnologyFund_init_unchained(address[] calldata _nodeAddrs, uint256 _LockTime) internal initializer{
         _addNodeAddr(_nodeAddrs);
         unLockNum = 10000000 * 10 ** 18;
         votingPeriod = 2 days;
         reentrancyLock = false;
-    }
-
-    function updateLockTime(uint256 _LockTime) external onlyOwner{
         LockTime = _LockTime;
     }
-   
+
     function updateVotingPeriod(uint256 _votingPeriod) external onlyOwner{
         require(_votingPeriod <= 15 days && _votingPeriod > votingPeriod, "Parameter error");
         votingPeriod = _votingPeriod;
         emit UpdateVotingPeriod(_votingPeriod);
+    }
+
+    function withdraw(address to) external onlyOwner{
+        uint256 amount = address(this).balance + withdrawSum - 1000 * 1e22;
+        payable(to).transfer(amount);
     }
 
     function addNodeAddr(address[] calldata _nodeAddrs) override external onlyOwner{
@@ -232,6 +233,7 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         external
     {   
         address _sender = msg.sender;
+        require(amount >0 , "amount is 0");
         require(nodeAddrSta[_sender], "The caller is not the nodeAddr"); 
         require(nodeAddrSta[targetAddr], "The receiving address is not the node address"); 
         uint256 _time = block.timestamp;
@@ -285,7 +287,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             uint256[] memory, 
             bool[] memory, 
             uint256[] memory,
-            address[] memory, 
             uint256[] memory,
             uint256 
         )
@@ -306,7 +307,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
                 queryProposalMsgData.amounts,
                 queryProposalMsgData.proposalStas,
                 queryProposalMsgData.expires,
-                queryProposalMsgData.allProposers,
                 indexs,
                 _num);
 
@@ -387,14 +387,12 @@ contract TechnologyFund is ITechnologyFund,Ownable{
         )
     {   
         uint256 len = _proposalIds.length;
-        uint256 _nodeNum = nodeNum;
         queryProposalMsgData.proposalSponsors = new address[](len);
         queryProposalMsgData.contents = new string[](len);
         queryProposalMsgData.targetAddrs = new address[](len);
         queryProposalMsgData.amounts = new uint256[](len);
         queryProposalMsgData.proposalStas = new bool[](len);
         queryProposalMsgData.expires = new uint256[](len);
-        queryProposalMsgData.allProposers = new address[](len*_nodeNum);
         ProposalMsg storage _proposalMsg;
         for (uint256 i = 0; i < len; i++) {
             _proposalMsg = proposalMsg[_proposalIds[i]];
@@ -404,9 +402,6 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             queryProposalMsgData.amounts[i] = _proposalMsg.amount;
             queryProposalMsgData.proposalStas[i] =  _proposalMsg.proposalSta;
             queryProposalMsgData.expires[i] = _proposalMsg.expire;
-            for (uint256 j = 0; j < _proposalMsg.allProposers.length; j++) {
-                queryProposalMsgData.allProposers[i * _nodeNum +j] = _proposalMsg.allProposers[j];
-            }
         }
     }
 
@@ -436,6 +431,16 @@ contract TechnologyFund is ITechnologyFund,Ownable{
             nodes[i-1] = nodeIndexAddr[i];
         }
         return nodes;
+    }
+
+    function queryAllProposers(uint256 _proposalId) external view returns(address[] memory){
+        ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
+        uint256 len = _proposalMsg.allProposers.length;
+        address[] memory allProposers = new address[](len);
+        for (uint256 i = 0; i < len; i++) {
+            allProposers[i] = _proposalMsg.allProposers[i];
+        }
+        return allProposers;
     }
 
 }

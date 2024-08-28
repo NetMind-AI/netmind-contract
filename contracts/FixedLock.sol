@@ -130,20 +130,16 @@ contract FixedLock is Initializable {
 
     constructor(){_disableInitializers();}
     
-    function init(uint256 _endTime, uint256 _lockDuration, uint256 _rewardPropotion, uint256 _rewardDelay, bool _isMainNet) public initializer{
-        //already initialized
-        
-        /* 
+    function init(uint256 _endTime, uint256 _rewardPropotion, uint256 _rewardDelay) public initializer{
         require(endTime > block.timestamp,"invalid time");
         startTime = block.timestamp;
         endTime = _endTime;
-        releaseTimes = 8;
-        releasePeriod = _isMainNet? 365 days: 1 minutes;
-
-        deadLockDuration = _lockDuration;
+        releaseStart = 1776297600; //2026-04-16 00:00:00
+        releaseEnd = 1902441600;   //2030-04-16 00:00:00  
+        releaseDuration = releaseEnd - releaseStart;
+       
         rewardPropotion = _rewardPropotion; 
         rewardDelay = _rewardDelay;
-        */
     }
 
     function owner() public view returns(address){
@@ -167,6 +163,7 @@ contract FixedLock is Initializable {
     }
 
     function lock(uint256 amt) public payable notContract returns(uint256 id){
+        require(amt > 0 , "amt error");
         amt = amt * 1e18;
         require(block.timestamp > startTime, "activit not start");
         require(block.timestamp < endTime, "activit end");

@@ -220,6 +220,7 @@ contract Payment is Initializable, Ownable {
 
     function payment(string memory paymentId, uint256 amt, uint256 worth) public payable notContract{
          recipt storage R = recipts[paymentId];
+         require(amt > 0, "amt error");
          require(R.amount <= 0, "PaymentId exist");
          require(amt == msg.value, "invalid amt");
 
@@ -233,6 +234,7 @@ contract Payment is Initializable, Ownable {
 
     function agentPayment(string memory paymentId, string memory paycode, uint256 worth) public onlyAgent{
         agentRecipt storage R = agentRecipts[paymentId];
+        require(worth > 0, "worth error");
         require(R.worth == 0, "PaymentId exist");
 
         R.paycode = paycode;
@@ -245,6 +247,7 @@ contract Payment is Initializable, Ownable {
     function refund(string memory paymentId, uint256 amt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         //check args
         recipt storage R = recipts[paymentId];
+        require(amt > 0, "amt error");
         require(R.amount > 0, "invalid paymentId"); 
         require(R.refund <= 0, "already refund");
         require(R.amount - R.distributed >= amt, "invalid amt");
@@ -384,6 +387,7 @@ contract Payment is Initializable, Ownable {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 hash = keccak256(abi.encodePacked(prefix, _digest));
         address signer = ecrecover(hash, _sig.v, _sig.r, _sig.s);
+        require(signer != address(0), "The signer is 0 address");
         bool isActs = IConf(conf).acts(signer); 
         return(isActs, signer); 
     }

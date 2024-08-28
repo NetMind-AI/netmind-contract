@@ -26,6 +26,7 @@ contract Management is IManagement{
     mapping(uint256 => address) nodeIndexAddr;
     mapping(address => bool) public nodeAddrSta;
     bool private reentrancyLock = false;
+    enum TypeIndex{AddNodeAddr, DeleteNodeAddr, ChangeAdmin, Upgrad, ExcContract}
 
     event Propose(address indexed proposer, uint256 proposalId, string label);
     event Vote(address indexed voter, uint256 proposalId);
@@ -37,7 +38,7 @@ contract Management is IManagement{
         address addr;  
         bytes data;
 		uint256 expire; 
-        uint256 typeIndex;  
+        TypeIndex typeIndex;  
         string  label;  
         mapping(address => bool) voterSta;  
     }
@@ -58,23 +59,24 @@ contract Management is IManagement{
     }
  
     function addNodePropose(address _addr) override external{
+        require(_addr != address(0), "The address is 0 address");
         require(!nodeAddrSta[_addr], "This node is already a node address");
         bytes memory data = new bytes(0x00);
-        _propose(address(0), _addr, data, 2, "addNode");
+        _propose(address(0), _addr, data, TypeIndex.AddNodeAddr, "addNode");
     }
   
     function deleteNodePropose(address _addr) override external{
         require(nodeAddrSta[_addr], "This node is not a node address");
         require(nodeNum > 5, "The number of node addresses cannot be less than 5");
-        _propose(address(0), _addr, new bytes(0x00), 3, "deleteNode");
+        _propose(address(0), _addr, new bytes(0x00), TypeIndex.DeleteNodeAddr, "deleteNode");
     }
      
     function updateProxyAdminPropose(address _targetAddr, address _addr) override external{
-        _propose(_targetAddr, _addr, new bytes(0x00), 4, "updateProxyAdmin");
+        _propose(_targetAddr, _addr, new bytes(0x00), TypeIndex.ChangeAdmin, "updateProxyAdmin");
     }
       
     function updateProxyUpgradPropose(address _targetAddr, address _addr) override external{
-        _propose(_targetAddr, _addr, new bytes(0x00), 5, "updateProxyUpgrad");
+        _propose(_targetAddr, _addr, new bytes(0x00), TypeIndex.Upgrad, "updateProxyUpgrad");
     }
     
     function excContractProposes(address[] calldata _targetAddrs, bytes[] calldata _datas) override external{
@@ -88,15 +90,16 @@ contract Management is IManagement{
     }
   
     function _excContractPropose(address _targetAddr, bytes memory _data) internal{
+        require(_targetAddr != address(this), "targetAddr error"); 
         require(bytesToUint(_data) != 2401778032 && bytesToUint(_data) != 822583150, "Calls to methods of proxy contracts are not allowed");
-        _propose(_targetAddr, address(0), _data, 6, "excContract");
+        _propose(_targetAddr, address(0), _data, TypeIndex.ExcContract, "excContract");
     }
 
     function _propose(
         address _targetAddr, 
         address _addr, 
         bytes memory _data, 
-        uint256 _typeIndex, 
+        TypeIndex _typeIndex, 
         string memory _label
     ) internal{
         address _sender = msg.sender;
@@ -142,24 +145,24 @@ contract Management is IManagement{
         }
         emit Vote(_sender, _proposalId);
     }
-    
+
     function _actuator(uint256 _proposalId) internal returns(bool){
         bool result = false;
         ProposalMsg storage _proposalMsg = proposalMsg[_proposalId];
-        uint256 _typeIndex = _proposalMsg.typeIndex;
-        if(_typeIndex == 2){
+        TypeIndex _typeIndex = _proposalMsg.typeIndex;
+        if(_typeIndex == TypeIndex.AddNodeAddr){
             addNodeAddr(_proposalMsg.addr);
             result = true;
-        }else if(_typeIndex == 3){
+        }else if(_typeIndex == TypeIndex.DeleteNodeAddr){
             deleteNodeAddr(_proposalMsg.addr);
             result = true;
-        }else if(_typeIndex == 4){
+        }else if(_typeIndex == TypeIndex.ChangeAdmin){
             IProxy proxy = IProxy(_proposalMsg.targetAddr);
             result = proxy.changeAdmin(_proposalMsg.addr);
-        }else if(_typeIndex == 5){
+        }else if(_typeIndex == TypeIndex.Upgrad){
             IProxy proxy = IProxy(_proposalMsg.targetAddr);
             result = proxy.upgrad(_proposalMsg.addr);
-        }else if(_typeIndex == 6){
+        }else if(_typeIndex == TypeIndex.ExcContract){
             bytes memory _data = _proposalMsg.data;
             (result, ) = _proposalMsg.targetAddr.call(_data);
         }

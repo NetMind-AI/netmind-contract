@@ -10,7 +10,12 @@ interface IPledge {
     function addNodeAddr(address[] calldata _nodeAddrs) external;
     function deleteNodeAddr(address[] calldata _nodeAddrs) external;
     function stake(address _nodeAddr, address _token, uint256 _amount) payable external;
+    function migrateStake(uint256[] calldata _indexs, bool _type) external;
     function cancleStake(uint256[] calldata _indexs) external;
+}
+
+interface ILongTermPledge {
+    function migrateStake(address _sender, address _nodeAddr, bool _type) payable external;
 }
 
 abstract contract Initializable {
@@ -134,6 +139,7 @@ contract Pledge is Initializable,Ownable,IPledge{
     mapping(string => uint256) public chainsIndex;  
     mapping(uint256 => string) public indexChains;  
     mapping(string => mapping(address => uint256)) public nodeChainAmount; 
+    address public longTermPledge;
     event UpadeNodesMapping(address nodeId, address oldAddr, address newAddr);
     event UpadeNodesWallet(address nodeId, address walAddr);
     event AddNodeAddr(address _nodeAddr);
@@ -177,6 +183,10 @@ contract Pledge is Initializable,Ownable,IPledge{
         __Ownable_init_unchained();
     }
 
+    
+    function updateLongTermPledge(address _longTermPledge) external onlyOwner{
+        longTermPledge = _longTermPledge;
+    }
     
     function updateGuarder(address _guarder) external onlyOwner{
         guarder = _guarder;
@@ -306,6 +316,25 @@ contract Pledge is Initializable,Ownable,IPledge{
                     cancelNodeStake(_stakeTokenMsg.nodeAddr);
                 }
                 emit CancleStakeToken(_stakeTokenMark, _sender, _stakeTokenMsg.nodeAddr, block.timestamp);
+            }
+        }
+    }
+
+    function migrateStake(uint256[] calldata _indexs, bool _type) override external nonReentrant(){
+        address _sender = msg.sender;
+        for (uint256 i = 0; i < _indexs.length; i++) {
+            uint256 _stakeTokenMark = _indexs[i];
+            if (_stakeTokenMark > 0){
+                StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_stakeTokenMark];
+                require(_stakeTokenMsg.userAddr == _sender, "Has no authority to remove the Stake not his own");
+                require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
+                _stakeTokenMsg.end = block.timestamp;
+                nodeStakeAmount[_stakeTokenMsg.nodeAddr] = nodeStakeAmount[_stakeTokenMsg.nodeAddr] - _stakeTokenMsg.tokenAmount;
+                if (nodeAddrSta[_stakeTokenMsg.nodeAddr]){
+                    cancelNodeStake(_stakeTokenMsg.nodeAddr);
+                }
+                emit CancleStakeToken(_stakeTokenMark, _sender, _stakeTokenMsg.nodeAddr, block.timestamp);
+                ILongTermPledge(longTermPledge).migrateStake{value: _stakeTokenMsg.tokenAmount}(_sender, _stakeTokenMsg.nodeAddr, _type);
             }
         }
     }
