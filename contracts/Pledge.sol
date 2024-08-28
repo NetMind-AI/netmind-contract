@@ -328,6 +328,7 @@ contract Pledge is Initializable,Ownable,IPledge{
                 StakeTokenMsg storage _stakeTokenMsg = stakeTokenMsg[_stakeTokenMark];
                 require(_stakeTokenMsg.userAddr == _sender, "Has no authority to remove the Stake not his own");
                 require(_stakeTokenMsg.end == 0, "The Stake has been redeemed");
+                require(_stakeTokenMsg.tokenAddr == address(0), "tokenAddr error");
                 _stakeTokenMsg.end = block.timestamp;
                 nodeStakeAmount[_stakeTokenMsg.nodeAddr] = nodeStakeAmount[_stakeTokenMsg.nodeAddr] - _stakeTokenMsg.tokenAmount;
                 if (nodeAddrSta[_stakeTokenMsg.nodeAddr]){
