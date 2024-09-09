@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
+
+interface IPledge {
+    event AddNodeAddr( address _nodeAddr ) ;
+    event CancleStakeToken( uint256 indexed _stakeIndex,address indexed _userAddr,address _nodeAddr,uint256 _time ) ;
+    event DeleteChain( string chain ) ;
+    event DeleteNodeAddr( address _nodeAddr ) ;
+    event OwnershipTransferred( address indexed previousOwner,address indexed newOwner ) ;
+    event StakeToken( uint256 indexed _stakeIndex,address _userAddr,address _nodeAddr,uint256 _amount,uint256 _time,address _token ) ;
+    event UpadeNodesMapping( address nodeId,address oldAddr,address newAddr ) ;
+    event UpadeNodesStake( address nodeAddr,uint256 amount,string chain ) ;
+    event UpadeNodesWallet( address nodeId,address walAddr ) ;
+    event UpdateGuarder( address guarder ) ;
+    event UpdateTokenSta( address _token,bool _sta ) ;
+    function addNodeAddr( address[] memory _nodeAddrs ) external   ;
+    function cancleStake( uint256[] memory _indexs ) external   ;
+    function chainsIndex( string memory  ) external view returns (uint256 ) ;
+    function chainsNum(  ) external view returns (uint256 ) ;
+    function deleteChain( string memory _chain ) external   ;
+    function deleteNodeAddr( address[] memory _nodeAddrs ) external   ;
+    function getNodeAddrById( address _nodeId ) external view returns (address ) ;
+    function getNodeIdByAddr( address _nodeAddr ) external view returns (address ) ;
+    function getNodeWalById( address _nodeId ) external view returns (address ) ;
+    function guarder(  ) external view returns (address ) ;
+    function indexChains( uint256  ) external view returns (string memory ) ;
+    function init(  ) external   ;
+    function isOwner(  ) external view returns (bool ) ;
+    function longTermPledge(  ) external view returns (address ) ;
+    function migrateStake( uint256[] memory _indexs,bool _type ) external   ;
+    function nodeAddrSta( address  ) external view returns (bool ) ;
+    function nodeChainAmount( string memory ,address  ) external view returns (uint256 ) ;
+    function nodeIndexAddr( uint256  ) external view returns (address ) ;
+    function nodeNum(  ) external view returns (uint256 ) ;
+    function owner(  ) external view returns (address ) ;
+    function queryChainStake( string memory chain ) external view returns (address[] memory , uint256[] memory ) ;
+    function queryNodeAddrAndId( uint256 start,uint256 end ) external view returns (address[] memory , address[] memory , address[] memory , uint256[] memory ) ;
+    function queryNodeIndex( address _nodeAddr ) external view returns (uint256 ) ;
+    function queryNodeRank( uint256 start,uint256 end ) external view returns (address[] memory addrs, uint256[] memory amounts) ;
+    function queryNodeStakeAmount( address _nodeAddr ) external view returns (uint256 ) ;
+    function queryStakeToken( address _userAddr,uint256 _page,uint256 _limit ) external view returns (address[] memory nodeAddrs, address[] memory tokenAddrs, uint256[] memory stakeMsgData, uint256 _num) ;
+    function renounceOwnership(  ) external   ;
+    function stake( address _nodeAddr,address _token,uint256 _amount ) external payable  ;
+    function stakeTokenMsg( uint256  ) external view returns (address userAddr, address nodeAddr, uint256 start, uint256 end, uint256 tokenAmount, address tokenAddr) ;
+    function stakeTokenNum(  ) external view returns (uint256 ) ;
+    function tokenSta( address  ) external view returns (bool ) ;
+    function transferOwnership( address newOwner ) external   ;
+    function upadeNodesStake( address[] memory addrs,uint256[] memory uints,uint256 expiredTime,string memory chain ) external   ;
+    function updateGuarder( address _guarder ) external   ;
+    function updateLongTermPledge( address _longTermPledge ) external   ;
+    function updateMapping( address[] memory _nodeIds,address[] memory _newAddrs,address[] memory _walAddrs ) external   ;
+    function updateTokenSta( address _token,bool _sta ) external   ;
+    function userStakeTokenIndex( address ,uint256  ) external view returns (uint256 ) ;
+    function userStakeTokenNum( address  ) external view returns (uint256 ) ;
+}
