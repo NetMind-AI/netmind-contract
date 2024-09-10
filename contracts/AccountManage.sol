@@ -225,12 +225,12 @@ contract AccountManage is Ownable{
     }
 
     modifier onlyAccountUsdExecutor() {
-        require(IConf(conf).accountUsdExecutor() == msg.sender, "caller is not the accountManageExecutor");
+        require(IConf(conf).accountUsdExecutor() == msg.sender, "caller is not the accountUsdExecutor");
         _;
     }
 
     modifier onlyExecDeductionExecutor() {
-        require(IConf(conf).execDeductionExecutor() == msg.sender, "caller is not the accountManageExecutor");
+        require(IConf(conf).execDeductionExecutor() == msg.sender, "caller is not the execDeductionExecutor");
         _;
     }
 
