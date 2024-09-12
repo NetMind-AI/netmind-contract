@@ -131,7 +131,7 @@ contract FixedLock is Initializable {
     constructor(){_disableInitializers();}
     
     function init(uint256 _endTime, uint256 _rewardPropotion, uint256 _rewardDelay) public initializer{
-        require(endTime > block.timestamp,"invalid time");
+        require(_endTime > block.timestamp,"invalid time");
         startTime = block.timestamp;
         endTime = _endTime;
         releaseStart = 1776297600; //2026-04-16 00:00:00
