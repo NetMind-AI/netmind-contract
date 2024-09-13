@@ -28,7 +28,7 @@ contract FixedLockTest is Test {
     function testLock() public {
         vm.warp(2028801601);
         uint256 lockAmount = 1;
-        address user = address(1);
+        address user = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
         vm.deal(user, lockAmount * 1e18);
         vm.startPrank(user,user);
         uint256 id = fixedLock.lock{value: lockAmount * 1e18}(lockAmount);
@@ -41,7 +41,7 @@ contract FixedLockTest is Test {
     function testUnlock() public {
         vm.warp(2028801601);
         uint256 lockAmount = 1;
-        address user = address(1);
+        address user = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
         vm.deal(user, lockAmount * 1e18);
         vm.startPrank(user,user);
         uint256 id = fixedLock.lock{value: lockAmount * 1e18}(lockAmount);
@@ -52,14 +52,14 @@ contract FixedLockTest is Test {
 
         assertEq(releasable, lockAmount * 1e18); 
         assertEq(address(fixedLock).balance, lockAmount * 1e18); 
-        // fixedLock.unlock(id, lockAmount); 
+        fixedLock.unlock(id, lockAmount); 
         vm.stopPrank();
     }
 
     function testClaimReward() public {
         vm.warp(2028801601);
         uint256 lockAmount = 1;
-        address user = address(1);
+        address user = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
         vm.deal(user, lockAmount * 1e18);
         vm.startPrank(user,user);
         uint256 id = fixedLock.lock{value: lockAmount * 1e18}(lockAmount);
@@ -68,7 +68,7 @@ contract FixedLockTest is Test {
         uint256 reward = fixedLock.checkReward(id);
         assertEq(reward, lockAmount * 1e18 * 50 / 1000); 
         vm.deal(address(fixedLock), lockAmount * 1e18 *2);
-        // fixedLock.claimReward(id); 
+        fixedLock.claimReward(id); 
     }
 
 

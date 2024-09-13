@@ -22,9 +22,6 @@ contract ConfInit is Test {
         ConfProxy confProxy = new ConfProxy(address(confImp));
 
         conf = IConf(address(confProxy));
-        // console2.log("before",block.timestamp);
-        // vm.warp(1000); 
-        // console2.log("after",block.timestamp);
         conf.initialize();
     }
 
