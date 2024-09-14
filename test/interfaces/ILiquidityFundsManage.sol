@@ -45,6 +45,13 @@ interface ILiquidityFundsManage {
         uint256 liquidity;
         address[] assentors;
     }
+    enum OP_TYPE{
+            BUY,
+            SELL,
+            ADDLIQUIDITY,
+            REMOVELIQUIDITY,
+            TRANSFER
+    }
 }
 
 
