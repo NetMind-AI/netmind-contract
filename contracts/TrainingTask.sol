@@ -165,7 +165,7 @@ contract TrainingTask is Ownable{
     ) internal 
       initializer
     {
-       require(conf != address(0), "The address is 0 address");
+       require(_conf != address(0), "The address is 0 address");
        require(_accountManage != address(0), "The address is 0 address");
        accountManage = IAccountManage(_accountManage);
        conf = _conf;
