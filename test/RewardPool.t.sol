@@ -12,16 +12,15 @@ contract RewardPoolTest is ConfInit {
     IRewardPool public rewardPool;
     address public owner = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
     address public reward = 0x38045Ad4B008c3aE7Eb11C3fA1A4AD7a946A6b15;
-    
-    uint256 acts1Pk = 0x8f71bc2fcff2b84fe9c56f1c8b292555ad0a0441749af588f0d39893ac97ba20;
-    address acts1 = vm.addr(acts1Pk);
-    uint256 acts2Pk = 0x8f71bc3fcff2b84fe9c56f1c8b292555ad0a0441749af588f0d39893ac97ba20;
-    address acts2 = vm.addr(acts2Pk);
+    address acts1; uint256 acts1Pk;
+    address acts2; uint256 acts2Pk;
     uint8 v; bytes32 r; bytes32 s;
 
     function setUp() public {
         vm.startPrank(owner);
         ConfInit.init();
+        (acts1, acts1Pk) = makeAddrAndKey("acts1Pk");
+        (acts2, acts2Pk) = makeAddrAndKey("acts2Pk");
         conf.file(acts1,true);
         conf.file(acts2,true);
 
