@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-interface ISnapshoot {
+interface ISnapshootInterface {
     event UpdateSnapshoot( uint256 _type,uint256 _day,string dataId,string dataHash ) ;
     event UpdateSnapshootFail( uint256 _type,uint256 _day,string dataId,string dataHash ) ;
     function conf(  ) external view returns (address ) ;
