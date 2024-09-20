@@ -12,7 +12,7 @@ contract NetMindTokenTest is Test {
     INetMindToken public netMindToken;
     address public owner = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
     address public minter = 0x70Da4f87fE2E695a058E5CBdB324c0935efd836C;
-    address public bank = 0x70Da4f87fE2E695a058E5CBdB324c0935efd836C;
+    
 
     function setUp() public {
         vm.startPrank(owner);
