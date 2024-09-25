@@ -320,7 +320,7 @@ contract LiquidityFundsManage is Ownable{
       }
 
       function transfer_P(address to, uint256 usdc, uint256 nmt) external OnlyManager returns(uint256){
-            (usdc, nmt)=(usdc*1e18, usdc*1e18);
+            (usdc, nmt)=(usdc*1e18, nmt*1e18);
             require(IERC20(USDC).balanceOf(address(this))>= usdc, "usdc out of balance");
             require(IERC20(NMT).balanceOf(address(this))>= nmt, "nmt out of balance");
 

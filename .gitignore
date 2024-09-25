@@ -3,9 +3,10 @@ class
 target/
 .externalToolBuilders
 .settings
+.history
 *.iml
 *.json
-
+lib
 .DS_Store
 
 node_modules
@@ -18,4 +19,5 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-test
+
+lib/forge-std

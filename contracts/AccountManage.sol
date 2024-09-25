@@ -225,12 +225,12 @@ contract AccountManage is Ownable{
     }
 
     modifier onlyAccountUsdExecutor() {
-        require(IConf(conf).accountUsdExecutor() == msg.sender, "caller is not the accountManageExecutor");
+        require(IConf(conf).accountUsdExecutor() == msg.sender, "caller is not the accountUsdExecutor");
         _;
     }
 
     modifier onlyExecDeductionExecutor() {
-        require(IConf(conf).execDeductionExecutor() == msg.sender, "caller is not the accountManageExecutor");
+        require(IConf(conf).execDeductionExecutor() == msg.sender, "caller is not the execDeductionExecutor");
         _;
     }
 
@@ -241,21 +241,21 @@ contract AccountManage is Ownable{
 
     constructor(){_disableInitializers();}
 
-    // function init(address _conf)  external 
-    //    initializer
-    // {
-    //     __Ownable_init_unchained();
-    //     __AccountManage_init_unchained(_conf);
-    // }
+    function init(address _conf)  external 
+       initializer
+    {
+        __Ownable_init_unchained();
+        __AccountManage_init_unchained(_conf);
+    }
 
-    // function __AccountManage_init_unchained(address _conf) internal 
-    //   initializer
-    // {
-    //    require(_conf != address(0), "_conf error");
-    //    conf = _conf;
-    //    CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
-    //    signNum = 2;
-    // }
+    function __AccountManage_init_unchained(address _conf) internal 
+      initializer
+    {
+       require(_conf != address(0), "_conf error");
+       conf = _conf;
+       CONTRACT_DOMAIN = keccak256('Netmind AccountManage V1.0');
+       signNum = 2;
+    }
  
     function updateSignNum(uint256 _signNum) external onlyOwner{
         require(_signNum > 0, "signNum error");
