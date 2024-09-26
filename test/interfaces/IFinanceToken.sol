@@ -21,7 +21,7 @@ interface IFinanceToken {
     function launch( uint256 investmentPeriod,uint256 unlockIntervalDays,uint256 unlockPercentage,uint256 sellNMTQuantity,address tokenReceiveAddress,address paymentToken,uint256 paymentPrice ) external   ;
     function nmtToken(  ) external view returns (address ) ;
     function purchaseNMTWithETH( uint256 _financingId ) external payable  ;
-    function purchaseNMTWithToken( uint256 _financingId,address _paymentToken,uint256 _paymentAmount ) external   ;
+    function purchaseNMTWithToken( uint256 _financingId,address _paymentToken,uint256 _paymentAmount ) external;
     function purchaseNumber(  ) external view returns (uint256 ) ;
     function queryUserMsg( address _userAddr ) external view returns (uint256[] memory , uint256[] memory , UserMsg[] memory ) ;
     function refund( uint256 _financingId ) external   ;
