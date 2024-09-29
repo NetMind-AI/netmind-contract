@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-interface IManagement {
+interface IManagemenInterface {
     event Propose( address indexed proposer,uint256 proposalId,string label ) ;
     event Vote( address indexed voter,uint256 proposalId ) ;
     function addNodePropose( address _addr ) external   ;
