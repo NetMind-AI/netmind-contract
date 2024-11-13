@@ -15,20 +15,23 @@ contract LongTermPledgeTest is Test {
     IPledge public pledge;
     ILongTermPledge public longTermPledge;
     address public owner = 0x2cD77303737430D78F5a5FbCf8B8f8064d2a92a9;
-    
 
     function setUp() public {
-        vm.startPrank(owner);
-        pledge = IPledge(address(new PledgeProxy(address(new Pledge()))));
-        pledge.init();
-        longTermPledge = ILongTermPledge(address(new LongTermPledgeProxy(address(new LongTermPledge()))));
-        longTermPledge.init(address(pledge));
-        address[] memory _addrs = new address[](3);
-        _addrs[0] = address(1);_addrs[1] = address(2);_addrs[2] = address(3);
-        pledge.addNodeAddr(_addrs);
-        pledge.updateGuarder(address(longTermPledge));
-        vm.stopPrank();
+        vm.createSelectFork("testnet", 9739969);
     }
+
+//    function setUp() public {
+//        vm.startPrank(owner);
+//        pledge = IPledge(address(new PledgeProxy(address(new Pledge()))));
+//        pledge.init();
+//        longTermPledge = ILongTermPledge(address(new LongTermPledgeProxy(address(new LongTermPledge()))));
+//        longTermPledge.init(address(pledge));
+//        address[] memory _addrs = new address[](3);
+//        _addrs[0] = address(1);_addrs[1] = address(2);_addrs[2] = address(3);
+//        pledge.addNodeAddr(_addrs);
+//        pledge.updateGuarder(address(longTermPledge));
+//        vm.stopPrank();
+//    }
 
     function testOwner() public {
         assertEq(longTermPledge.owner(), owner);
@@ -126,10 +129,25 @@ contract LongTermPledgeTest is Test {
         }else{
             vm.assertEq(lockTime2, block.timestamp +182 days);
         }
-        
+
+
     }
 
+    function testUpdateStakeMainnet() public {
+        (address userAddr, address nodeAddr, uint256 start, uint256 lockTime, uint256 end, uint256 tokenAmount, address tokenAddr) = longTermPledge.stakeTokenMsg(1);
+        address user = 0x2a885Acd87Ac0DEf4Abb9e7491B8F62d2943bBCB;
+        vm.assertEq(lockTime, 1729758848);
+        vm.prank(user);
+        longTermPledge.updateStake(1, true);
+        ( ,  ,  ,   uint256 lockTime2, ,  ,  ) = longTermPledge.stakeTokenMsg(1);
+        if(true){
+            vm.assertEq(lockTime2, 0);
+        }else{
+            vm.assertEq(lockTime2, block.timestamp +182 days);
+        }
 
+
+    }
 
 
 

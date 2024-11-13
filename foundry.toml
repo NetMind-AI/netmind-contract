@@ -7,6 +7,6 @@ libs = ["lib"]
 optimizer = true
 optimizer_runs = 200
 
-rpc_endpoints = { mainnet = "https://rpc.ankr.com/eth",  bsc = "https://rpc.ankr.com/bsc", bscTest = "https://bsc-testnet.nodereal.io/v1/73509119cb1c426cb38a01cecfce296d" }
+rpc_endpoints = { mainnet = "https://rpc.ankr.com/eth",  bsc = "https://rpc.ankr.com/bsc", bscTest = "https://bsc-testnet.nodereal.io/v1/73509119cb1c426cb38a01cecfce296d", testnet = "http://18.246.17.16:8515" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
