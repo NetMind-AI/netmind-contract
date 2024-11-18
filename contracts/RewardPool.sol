@@ -145,6 +145,7 @@ contract RewardPool is Initializable, Ownable {
     }
 
     function setBurnLimit(uint256 amt) public onlyOwner{
+        require(amt <= 5000000e18, "quantity exceeds limit");
         burnLimit = amt;
     }
 

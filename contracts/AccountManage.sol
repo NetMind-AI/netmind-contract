@@ -284,20 +284,20 @@ contract AccountManage is Ownable{
         feeTo = _feeTo;
     }
 
-    function addBlacklist(address[] memory guys) public onlyExecDeductionExecutor {
-        for (uint256 i = 0; i< guys.length; i++){
-           require(guys[i] != address(0), "zero address");
-            whiteAddr[guys[i]] = true;
-            emit UpdateWhiteAddr(guys[i], true);
-        }
-    }
+    // function addBlacklist(address[] memory guys) public onlyExecDeductionExecutor {
+    //     for (uint256 i = 0; i< guys.length; i++){
+    //        require(guys[i] != address(0), "zero address");
+    //         whiteAddr[guys[i]] = true;
+    //         emit UpdateWhiteAddr(guys[i], true);
+    //     }
+    // }
 
-    function removeBlacklist(address[] memory guys) public onlyExecDeductionExecutor{
-        for (uint256 i = 0; i< guys.length; i++){
-            whiteAddr[guys[i]] = false;
-            emit UpdateWhiteAddr(guys[i], false);
-        }
-    }
+    // function removeBlacklist(address[] memory guys) public onlyExecDeductionExecutor{
+    //     for (uint256 i = 0; i< guys.length; i++){
+    //         whiteAddr[guys[i]] = false;
+    //         emit UpdateWhiteAddr(guys[i], false);
+    //     }
+    // }
 
     function initUserId(string memory _userId, address _addr) external onlyExecutor{
         require(userAccountById[_userId] == 0, "User id is already occupied");
@@ -469,9 +469,9 @@ contract AccountManage is Ownable{
         require(orderId[paymentId], "paymentId error");
         OrderMsg storage _orderMsg = orderMsg[paymentId];
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
-        if(gpu_fee > 0){
-            require(whiteAddr[gpu_provider], "not Whiltelist user");
-        }
+        // if(gpu_fee > 0){
+        //     require(whiteAddr[gpu_provider], "not Whiltelist user");
+        // }
 
         require(_orderMsg.nmtAmount - _orderMsg.distributeNmt >=  gpu_fee + platform_fee, "distributeNmt out of range");
         require(block.timestamp <= expir, "sign expired");
@@ -563,9 +563,9 @@ contract AccountManage is Ownable{
 
     function _distribute(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) internal{
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
-        if(gpu_fee > 0){
-            require(whiteAddr[gpu_provider], "not Whiltelist user");
-        }
+        // if(gpu_fee > 0){
+        //     require(whiteAddr[gpu_provider], "not Whiltelist user");
+        // }
 
         require(block.timestamp <= expir, "sign expired");
 
