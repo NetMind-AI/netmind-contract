@@ -289,9 +289,6 @@ contract Payment is Initializable, Ownable {
         require(gpu_fee + platform_fee != 1, "invaild distribute amount");
         
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
-        if(gpu_fee > 0){
-            require(_isInWhilteList(gpu_provider), "not Whiltelist user");
-        }
 
         require(R.amount - R.distributed - R.refund >=  gpu_fee + platform_fee, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
@@ -334,9 +331,6 @@ contract Payment is Initializable, Ownable {
         require(gpu_fee + platform_fee != 1, "invaild distribute amount");
         
         require(gpu_fee > 0 || platform_fee > 0,"zero distribute");
-        if(gpu_fee > 0){
-            require(_isInWhilteList(gpu_provider), "not Whiltelist user");
-        }
 
         require(R.worth - R.distributed >=  gpu_fee + platform_fee, "distribute out of range");
         require(block.timestamp <= expir, "sign expired");
