@@ -121,7 +121,7 @@ contract AccountManage is Ownable{
     address public conf;
     uint256 public burnAmount;
     uint256 public num;
-    mapping(uint256 => UserAccountMsg) userAccountMsg;
+    mapping(uint256 => UserAccountMsg) public userAccountMsg;
     mapping(string => uint256) public userAccountById;
     mapping(address => uint256) public userAccountByAddr;
     mapping(address => bool) public authSta;
@@ -134,16 +134,13 @@ contract AccountManage is Ownable{
     uint256 public quota;
     mapping(string => bool) public orderId;
     uint256 public useFeeSum;
-    mapping(string => OrderMsg) orderMsg;
+    mapping(string => OrderMsg) public orderMsg;
     mapping(address => bool) public whiteAddr;
     address public fiatoSettle;
     mapping(bytes32=>bool) digestSta;
     address public feeTo;
-    mapping(string => OrderCnyMsg) orderCnyMsg;
+    mapping(string => OrderCnyMsg) public orderCnyMsg;
     uint256 public quotaCny;
-    mapping(uint256 => bool) userSta;
-    mapping(string => bool) orderSta;
-    mapping(string => bool) orderCnySta;
     
     event WithdrawToken(address indexed _userAddr, uint256 _nonce, uint256 _amount);
     event UpdateAuthSta(address _addr, bool sta);
@@ -306,7 +303,6 @@ contract AccountManage is Ownable{
         require(userAccountById[_userId] == 0, "User id is already occupied");
         require(userAccountByAddr[_addr] == 0, "User address is already occupied");
         uint256 _num = ++num;
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         _userAccountMsg.userId = _userId;
         userAccountById[_userId] = _num;
@@ -319,7 +315,6 @@ contract AccountManage is Ownable{
 
     function updateAccount(string memory _userId, address _addr) external onlyExecutor{
         uint256 _num = userAccountById[_userId];
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(_num > 0, "not exist");
         userAccountByAddr[_userAccountMsg.addr] = 0;
@@ -376,7 +371,6 @@ contract AccountManage is Ownable{
         useFeeSum += _nmt;
         _userAccountMsg.balance = _userAccountMsg.balance - _nmt;
         orderMsg[_orderId] = OrderMsg(_nmt, _usd, _overdraft, 0, 0, 0, 0, 0);
-        orderSta[_orderId] = true;
         emit ExecDeduction(_userId, _orderId, _msg, _nmt, _userAccountMsg.balance, _usd, _userAccountMsg.usd, _overdraft, _userAccountMsg.overdraft);
     }
 
@@ -386,17 +380,14 @@ contract AccountManage is Ownable{
         _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft + _cnyOverdraft;
         require(_userAccountMsg.cnyOverdraft <= quotaCny, "quotaCny error");
         orderCnyMsg[_orderId] = OrderCnyMsg(_cny, _cnyOverdraft, 0, 0, 0);
-        orderCnySta[_orderId] = true;
         emit ExecCnyDeduction(_userId, _orderId, _msg, _cny, _userAccountMsg.cny, _cnyOverdraft, _userAccountMsg.cnyOverdraft);
     }
     
     function refund(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _nmt, uint256 _usd, uint256 _overdraft) external onlyExecDeductionExecutor{
-        orderMsg[_deductionOrderId] = getOrderMsg(_deductionOrderId);
-        orderSta[_deductionOrderId] = true;
         OrderMsg storage _orderMsg = orderMsg[_deductionOrderId];
         require(
             _orderMsg.nmtAmount >= _orderMsg.refundNmt + _nmt && 
-            _orderMsg.usd + _orderMsg.overdraft + 5000000 >= _orderMsg.refundUsd + _usd + _orderMsg.refundOverdraft + _overdraft, 
+            _orderMsg.usd + _orderMsg.overdraft + 500 >= _orderMsg.refundUsd + _usd + _orderMsg.refundOverdraft + _overdraft, 
             "orderIdMsg error"
         );
         _orderMsg.refundNmt += _nmt;
@@ -412,8 +403,6 @@ contract AccountManage is Ownable{
     }
    
     function refundCny(string memory _userId, string memory _deductionOrderId, string memory _orderId, uint256 _cny, uint256 _cnyOverdraft) external onlyExecDeductionExecutor{
-        orderCnyMsg[_deductionOrderId] = getOrderCnyMsg(_deductionOrderId);
-        orderCnySta[_deductionOrderId] = true;
         OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[_deductionOrderId];
         require(
             _orderCnyMsg.cny + _orderCnyMsg.overdraft >= _orderCnyMsg.refundCny + _cny + _orderCnyMsg.refundOverdraft + _cnyOverdraft, 
@@ -432,7 +421,6 @@ contract AccountManage is Ownable{
         address sender = msg.sender;
         uint256 _num = userAccountByAddr[sender];
         require(_num > 0, "The user id does not exist");
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         _userAccountMsg.balance = _userAccountMsg.balance + msg.value;
         emit TokenCharge(_userAccountMsg.userId, msg.value, _userAccountMsg.balance, sender);
@@ -442,7 +430,6 @@ contract AccountManage is Ownable{
         address sender = msg.sender;
         uint256 _num = userAccountByAddr[sender];
         require(_num > 0, "The user id does not exist");
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(address(this).balance >= value, "Insufficient balance");
         _userAccountMsg.balance = _userAccountMsg.balance - value;
@@ -521,8 +508,6 @@ contract AccountManage is Ownable{
 
     function distributeUsd(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         require(orderId[paymentId], "paymentId error");
-        orderMsg[paymentId] = getOrderMsg(paymentId);
-        orderSta[paymentId] = true;
         OrderMsg storage _orderMsg = orderMsg[paymentId];
         require(_orderMsg.usd - _orderMsg.distributeUsd >=  gpu_fee + platform_fee, "distributeUsd out of range");
         _distribute(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir, vs, rs);
@@ -532,8 +517,6 @@ contract AccountManage is Ownable{
 
     function distributeCny(string memory paymentId, address gpu_provider, uint256 gpu_fee, uint256 gpu_nmt, uint256 platform_fee, uint256 platform_nmt, uint256 expir, uint8[] calldata vs, bytes32[] calldata rs) public notContract{
         require(orderId[paymentId], "paymentId error");
-        orderCnyMsg[paymentId] = getOrderCnyMsg(paymentId);
-        orderCnySta[paymentId] = true;
         OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[paymentId];
         require(_orderCnyMsg.cny - _orderCnyMsg.distributeCny >=  gpu_fee + platform_fee, "distributeCny out of range");
         _distribute(paymentId, gpu_provider, gpu_fee, gpu_nmt, platform_fee, platform_nmt, expir, vs, rs);
@@ -557,28 +540,14 @@ contract AccountManage is Ownable{
     }
     
     function queryUserMsgById(string memory _userId) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, address) {
-        uint256 _num = userAccountById[_userId];
-        require(_num > 0, "user not exist");
-        UserAccountMsg memory _userAccountMsg = userAccountMsg[_num];
-        if(!userSta[_num]){
-            _userAccountMsg.usd = _userAccountMsg.usd * 10000;
-            _userAccountMsg.overdraft = _userAccountMsg.overdraft * 10000;
-            _userAccountMsg.cny = _userAccountMsg.cny * 10000;
-            _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft * 10000;
-        }
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
         return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft, _userAccountMsg.freezed, _userAccountMsg.addr);
     }
 
     function queryUserMsgByAddr(address _addr) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, string memory) {
         uint256 _num = userAccountByAddr[_addr];
         require(_num > 0, "not exist");
-        UserAccountMsg memory _userAccountMsg = userAccountMsg[_num];
-        if(!userSta[_num]){
-            _userAccountMsg.usd = _userAccountMsg.usd * 10000;
-            _userAccountMsg.overdraft = _userAccountMsg.overdraft * 10000;
-            _userAccountMsg.cny = _userAccountMsg.cny * 10000;
-            _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft * 10000;
-        }
+        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         return (_userAccountMsg.balance, _userAccountMsg.usd, _userAccountMsg.overdraft, _userAccountMsg.cny, _userAccountMsg.cnyOverdraft, _userAccountMsg.freezed, _userAccountMsg.userId);
     }
 
@@ -650,37 +619,37 @@ contract AccountManage is Ownable{
                         _userAccountMsg.usd = 0;
                         return true;
                     }else {
-                        if(offsetNmtAmount * 1e6 <= _userAccountMsg.balance){
-                            _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e6;
+                        if(offsetNmtAmount * 1e10 <= _userAccountMsg.balance){
+                            _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e10;
                             _userAccountMsg.overdraft = 0;
-                            useFeeSum += offsetNmtAmount* 1e6;
-                            emit CaclAccountBalance(_userId, offsetNmtAmount* 1e6, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft, 0, _price);
+                            useFeeSum += offsetNmtAmount* 1e10;
+                            emit CaclAccountBalance(_userId, offsetNmtAmount* 1e10, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft, 0, _price);
                             _userAccountMsg.usd = 0;
                             return true;
                         }else {
-                            uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e6;
+                            uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e10;
                             _userAccountMsg.overdraft = offsetOverdraft * _price / 1e24; 
-                            _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e6;
-                            useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e6;
-                            emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e6, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft - _userAccountMsg.overdraft, _userAccountMsg.overdraft, _price);
+                            _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e10;
+                            useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e10;
+                            emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e10, _userAccountMsg.balance, _userAccountMsg.usd, 0, overdraft - _userAccountMsg.overdraft, _userAccountMsg.overdraft, _price);
                             _userAccountMsg.usd = 0;
                             return true;
                         }
                     }
                 }else {
                     uint256 offsetNmtAmount = _userAccountMsg.overdraft * 1e24 / _price;
-                    if(offsetNmtAmount * 1e6 <= _userAccountMsg.balance){
-                        _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e6;
-                        useFeeSum += offsetNmtAmount* 1e6;
-                        emit CaclAccountBalance(_userId, offsetNmtAmount * 1e6, _userAccountMsg.balance, 0, 0, overdraft, 0,_price);
+                    if(offsetNmtAmount * 1e10 <= _userAccountMsg.balance){
+                        _userAccountMsg.balance = _userAccountMsg.balance - offsetNmtAmount * 1e10;
+                        useFeeSum += offsetNmtAmount* 1e10;
+                        emit CaclAccountBalance(_userId, offsetNmtAmount * 1e10, _userAccountMsg.balance, 0, 0, overdraft, 0,_price);
                         _userAccountMsg.overdraft = 0;
                         return true;
                     }else {
-                        uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e6;
+                        uint256 offsetOverdraft = offsetNmtAmount - _userAccountMsg.balance/1e10;
                         _userAccountMsg.overdraft = offsetOverdraft * _price / 1e24; 
-                        _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e6;
-                        useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e6;
-                        emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e6, _userAccountMsg.balance, 0, 0, overdraft-_userAccountMsg.overdraft, _userAccountMsg.overdraft,_price);
+                        _userAccountMsg.balance = _userAccountMsg.balance - (offsetNmtAmount - offsetOverdraft)*1e10;
+                        useFeeSum += (offsetNmtAmount - offsetOverdraft)*1e10;
+                        emit CaclAccountBalance(_userId, (offsetNmtAmount - offsetOverdraft)*1e10, _userAccountMsg.balance, 0, 0, overdraft-_userAccountMsg.overdraft, _userAccountMsg.overdraft,_price);
                         return true;
                     }
                 }
@@ -740,43 +709,8 @@ contract AccountManage is Ownable{
         emit WithdrawToken(addr, _nonce, uints[0]);
     }
 
-    function updateUserAccountMsg(uint256 index) internal{
-        if(!userSta[index]){
-            userSta[index] = true;
-            userAccountMsg[index].usd = userAccountMsg[index].usd * 10000;
-            userAccountMsg[index].overdraft = userAccountMsg[index].overdraft * 10000;
-            userAccountMsg[index].cny = userAccountMsg[index].cny * 10000;
-            userAccountMsg[index].cnyOverdraft = userAccountMsg[index].cnyOverdraft * 10000;
-        }
-    }
-
-    function getOrderMsg(string memory _orderId) public view returns (OrderMsg memory)  {
-        OrderMsg memory _ordMsg = orderMsg[_orderId];
-        if(!orderSta[_orderId]){
-            _ordMsg.usd = _ordMsg.usd * 10000;
-            _ordMsg.overdraft = _ordMsg.overdraft * 10000;
-            _ordMsg.refundUsd = _ordMsg.refundUsd * 10000;
-            _ordMsg.refundOverdraft = _ordMsg.refundOverdraft * 10000;
-            _ordMsg.distributeUsd = _ordMsg.distributeUsd * 10000;
-        }
-        return _ordMsg; 
-    }
-
-    function getOrderCnyMsg(string memory _orderId) public view returns (OrderCnyMsg memory)  {
-        OrderCnyMsg memory _ordCnyMsg = orderCnyMsg[_orderId];
-        if(!orderCnySta[_orderId]){
-            _ordCnyMsg.cny = _ordCnyMsg.cny * 10000;
-            _ordCnyMsg.overdraft = _ordCnyMsg.overdraft * 10000;
-            _ordCnyMsg.refundCny = _ordCnyMsg.refundCny * 10000;
-            _ordCnyMsg.refundOverdraft = _ordCnyMsg.refundOverdraft * 10000;
-            _ordCnyMsg.distributeCny = _ordCnyMsg.distributeCny * 10000;
-        }
-        return _ordCnyMsg; 
-    }
-
     function getUserAccountMsg(string memory _userId, string memory _orderId) internal returns (UserAccountMsg storage)  {
         uint256 _num = userAccountById[_userId];
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(_num > 0, "user not exist");
         require(!orderId[_orderId], "orderId error");
@@ -784,9 +718,8 @@ contract AccountManage is Ownable{
         return _userAccountMsg; 
     }
 
-    function getUserAccountMsg(string memory _userId) internal returns (UserAccountMsg storage)  {
+    function getUserAccountMsg(string memory _userId) internal view returns (UserAccountMsg storage)  {
         uint256 _num = userAccountById[_userId];
-        updateUserAccountMsg(_num);
         UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
         require(_num > 0, "user not exist");
         return _userAccountMsg; 
