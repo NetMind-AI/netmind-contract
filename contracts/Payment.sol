@@ -363,7 +363,7 @@ contract Payment is Initializable, Ownable {
         //distribute
         R.distributed += (gpu_fee + platform_fee + burn);
         if (gpu_fee > 0) payable(gpu_provider).transfer(gpu_fee);
-        if (platform_fee > 0) payable(feeTo).transfer(platform_fee);
+        if (platform_fee > 0) payable(platform).transfer(platform_fee);
         if (burn > 0) payable(address(0)).transfer(burn);
 
         emit DistributeV2(paymentId, gpu_provider, gpu_fee, platform, platform_fee, burn);
