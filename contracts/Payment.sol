@@ -420,7 +420,8 @@ contract Payment is Initializable, Ownable {
         address platform;
         uint256 platform_fee;
         uint256 platform_nmt;
-        uint256 burn;
+        uint256 burn_fee;
+        uint256 burn_nmt;
         uint256 expir;
 	}
 
@@ -435,9 +436,9 @@ contract Payment is Initializable, Ownable {
         require(R.distributed != 1, "already distribute"); 
         require(a.gpu_fee + a.platform_fee != 1, "invaild distribute amount");
         
-        require(a.gpu_fee > 0 || a.platform_fee > 0 || a.burn > 0,"zero distribute");
+        require(a.gpu_fee > 0 || a.platform_fee > 0 || a.burn_fee > 0,"zero distribute");
 
-        require(R.worth - R.distributed >= a.gpu_fee + a.platform_fee + a.burn, "distribute out of range");
+        require(R.worth - R.distributed >= a.gpu_fee + a.platform_fee + a.burn_fee, "distribute out of range");
         require(block.timestamp <= a.expir, "sign expired");
         
         //check sign 
@@ -464,10 +465,10 @@ contract Payment is Initializable, Ownable {
         }
 
         //distribute
-        R.distributed += (a.gpu_fee + a.platform_fee + a.burn);
-        require(ICleaner(cleaner).distribute(a.gpu_provider, a.gpu_nmt, a.platform, a.platform_nmt, a.burn), "cleaner feild");
+        R.distributed += (a.gpu_fee + a.platform_fee + a.burn_fee);
+        require(ICleaner(cleaner).distribute(a.gpu_provider, a.gpu_nmt, a.platform, a.platform_nmt, a.burn_nmt), "cleaner feild");
 
-        emit DistributeV2(a.paymentId, a.gpu_provider, a.gpu_fee, a.platform, a.platform_fee, a.burn);
+        emit DistributeV2(a.paymentId, a.gpu_provider, a.gpu_fee, a.platform, a.platform_fee, a.burn_fee);
     }
 
     function areElementsUnique(address[] memory arr) internal pure returns (bool) {
@@ -538,7 +539,7 @@ contract Payment is Initializable, Ownable {
             abi.encodePacked(
                 '\x19\x01',
                 DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(a.paymentId, a.gpu_provider, a.gpu_fee, a.gpu_nmt, a.platform, a.platform_fee, a.platform_nmt, a.burn, a.expir)))
+                keccak256(abi.encode(a.paymentId, a.gpu_provider, a.gpu_fee, a.gpu_nmt, a.platform, a.platform_fee, a.platform_nmt, a.burn_fee, a.burn_nmt, a.expir)))
         );
     }
 
