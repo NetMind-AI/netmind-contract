@@ -547,21 +547,21 @@ contract AccountManage is Ownable{
     function _orderNmtMsgUpdate(string memory paymentId, uint256 amount) internal{
         require(orderId[paymentId], "paymentId error");
         OrderMsg storage _orderMsg = orderMsg[paymentId];
-        require(_orderMsg.nmtAmount - _orderMsg.distributeNmt >= amount, "distributeNmt out of range");
+        require(_orderMsg.nmtAmount - _orderMsg.refundNmt - _orderMsg.distributeNmt >= amount, "distributeNmt out of range");
         _orderMsg.distributeNmt += amount;
     }
 
     function _orderUsdMsgUpdate(string memory paymentId, uint256 amount) internal{
         require(orderId[paymentId], "paymentId error");
         OrderMsg storage _orderMsg = orderMsg[paymentId];
-        require(_orderMsg.usd - _orderMsg.distributeUsd >= amount, "distributeUsd out of range");
+        require(_orderMsg.usd + _orderMsg.overdraft - _orderMsg.refundUsd  - _orderMsg.distributeUsd >= amount, "distributeUsd out of range");
         _orderMsg.distributeUsd += amount;
     }
 
     function _orderCnyMsgUpdate(string memory paymentId, uint256 amount) internal{
         require(orderId[paymentId], "paymentId error");
         OrderCnyMsg storage _orderCnyMsg = orderCnyMsg[paymentId];
-        require(_orderCnyMsg.cny - _orderCnyMsg.distributeCny >= amount, "distributeCny out of range");
+        require(_orderCnyMsg.cny  + _orderCnyMsg.overdraft- _orderCnyMsg.refundCny - _orderCnyMsg.distributeCny >= amount, "distributeCny out of range");
         _orderCnyMsg.distributeCny += amount;
     }
 
