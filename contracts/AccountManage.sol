@@ -147,6 +147,7 @@ contract AccountManage is Ownable{
     event UpdateAuthSta(address _addr, bool sta);
     event InitAccount(string userId, address userAddr);
     event UpdateAccount(string userId, address userAddr);
+    event DeleteAccount(string userId, address userAddr);
     event TokenCharge(string userId, uint256 value, uint256 nmtbalance, address chargeAddr);
     event Withdraw(address userAddr, string userId, uint256 value, uint256 nmtbalance);
     event Freeze(string userId, uint256 value, uint256 balance, uint256 jobType);
@@ -315,6 +316,13 @@ contract AccountManage is Ownable{
         emit UpdateAccount(_userId, _addr);
     }
  
+    function deleteAccount(string memory _userId) external onlyExecutor{
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
+        userAccountByAddr[_userAccountMsg.addr] = 0;
+        userAccountById[_userId] = 0;
+         emit DeleteAccount(_userId, _userAccountMsg.addr);
+    }
+ 
     function updateAccountUsd(string memory _userId, string memory _orderId, uint256 _usd, bool _type, uint256 _price) external onlyAccountUsdExecutor{
         UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId, _orderId);
         if(_type){
@@ -405,14 +413,11 @@ contract AccountManage is Ownable{
         _userAccountMsg.cnyOverdraft = _userAccountMsg.cnyOverdraft - _cnyOverdraft;
         emit RefundCny(_userId, _deductionOrderId, _orderId, _cny, _userAccountMsg.cny, _cnyOverdraft, _userAccountMsg.cnyOverdraft);
     }
-
-    function tokenCharge() external payable{
-        address sender = msg.sender;
-        uint256 _num = userAccountByAddr[sender];
-        require(_num > 0, "The user id does not exist");
-        UserAccountMsg storage _userAccountMsg = userAccountMsg[_num];
+    
+    function tokenCharge(string memory _userId) external payable{
+        UserAccountMsg storage _userAccountMsg = getUserAccountMsg(_userId);
         _userAccountMsg.balance = _userAccountMsg.balance + msg.value;
-        emit TokenCharge(_userAccountMsg.userId, msg.value, _userAccountMsg.balance, sender);
+        emit TokenCharge(_userAccountMsg.userId, msg.value, _userAccountMsg.balance, msg.sender);
     }
 
     function withdraw(uint256 value) external nonReentrant(){
