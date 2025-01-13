@@ -9,6 +9,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract NetMindToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, AccessControlUpgradeable, ERC20PermitUpgradeable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant EXECUTE_ROLE = keccak256("EXECUTE_ROLE");
+    address public receiver;
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,5 +31,24 @@ contract NetMindToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeab
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) returns (bool) {
         _mint(to, amount);
         return true;
+    }
+
+    function updateReceiver(address addr) public onlyRole(DEFAULT_ADMIN_ROLE){
+        require(addr != address(0), "addr error");
+        receiver = addr;
+    }
+
+    function withdrawTokens(address[] calldata tokens) public onlyRole(EXECUTE_ROLE) {
+        require(receiver != address(0), "receiver error");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if(tokens[i] == address(0)){
+                payable(receiver).transfer(address(this).balance);
+            }else {
+                (bool success, ) = address(tokens[i]).call(
+                    abi.encodeWithSelector(IERC20(tokens[i]).transfer.selector, receiver, IERC20(tokens[i]).balanceOf(address(this)))
+                );
+                require(success, "Token transfer failed");
+            }
+        }
     }
 }
