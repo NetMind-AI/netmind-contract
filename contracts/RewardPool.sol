@@ -120,6 +120,7 @@ contract RewardPool is Initializable, Ownable {
     //manage move amount
     uint256 public Moveable;
     uint256 public BurnNonce;
+    uint256 public burnLimit;
 
     event Move(uint256 indexed day, uint256 timestamp, address op, uint256 amt);
     event Burn(uint256 indexed day, uint256 timestamp, address op, uint256 amt);
@@ -141,6 +142,16 @@ contract RewardPool is Initializable, Ownable {
     
     function setDailyMaxMove(uint256 amt) public onlyOwner{
         DailyMaxMove = amt;
+    }
+
+    function setBurnLimit(uint256 amt) public onlyOwner{
+        require(amt <= 5000000e18, "quantity exceeds limit");
+        burnLimit = amt;
+    }
+
+    function burn(uint256 amt) public onlyOwner{
+        require(burnLimit >= amt, "amt error");
+        payable(address(0)).transfer(amt);
     }
 
     constructor(){_disableInitializers();}

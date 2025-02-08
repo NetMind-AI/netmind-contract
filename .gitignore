@@ -19,5 +19,5 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-
 lib/forge-std
+lib/

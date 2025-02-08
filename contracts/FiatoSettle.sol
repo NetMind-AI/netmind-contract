@@ -108,6 +108,7 @@ contract FiatoSettle is Initializable, Ownable{
     address public burnAddr;
     address public accountManage;
     event Distribute(address receiver, uint256 amount, uint256 burn);
+    event DistributeAndBurn(address gpu_provider, uint256 gpu_nmt, address platform, uint256 platform_nmt, uint256 burn);
     
     modifier nonReentrant() {
         require(!reentrancyLock);
@@ -144,5 +145,14 @@ contract FiatoSettle is Initializable, Ownable{
         return true;
     }
     
+    function distribute(address gpu_provider, uint256 gpu_nmt, address platform, uint256 platform_nmt, uint256 burn) external returns(bool){
+        require(msg.sender == payment || msg.sender == accountManage, "sender error");
+        require(address(this).balance >= gpu_nmt + platform_nmt + burn, "fiatoSettle error");
+        if (gpu_nmt > 0) payable(gpu_provider).transfer(gpu_nmt);
+        if (platform_nmt > 0) payable(platform).transfer(platform_nmt);
+        if (burn> 0) payable(0).transfer(burn);
+        emit DistributeAndBurn(gpu_provider, gpu_nmt, platform, platform_nmt, burn);
+        return true;
+    }
 }
 
